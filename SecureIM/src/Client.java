@@ -40,24 +40,43 @@ import javax.swing.JTextField;
 
 public class Client {
   private final String USER_AGENT = "Mozilla/5.0";
+  private static void printUsage(){
+      System.out.println("Please use command line arguments to specify if this is a client or a server");
+      System.out.println("run     java Client --server   to create a server");
+      System.out.println("run     java Client --client   to create a client");
+  }
   private static KeyPair pair;
   private static PrivateKey priv;
   public static PublicKey pub;
   public static String ptFileName = "plaintextMessage.txt";
   public static String encFileName = "encMessage";
   public static void main(String[] args) throws Exception {
+    if(args.length != 1){
 
-    Scanner sc = new Scanner(System.in);
-    boolean options[] = new boolean[3];
-    String securedMessage = "";
+      printUsage();
+      return;
+    }
+
+    if(args[0].equals("--server")){ 
+      System.out.println("Starting server");
+    } else if (args[0].equals("--client")){
+      System.out.println("Starting client");
+      Scanner sc = new Scanner(System.in);
+      boolean options[] = new boolean[3];
+      String securedMessage = "";
 
 
-    options = getSecurityOptions(sc);
-    String plaintextMessage = getUserMessage(sc);
-    sc.close();
-    establishSecureConnection();
+      options = getSecurityOptions(sc);
+      String plaintextMessage = getUserMessage(sc);
+      sc.close();
+      establishSecureConnection();
 
-    securedMessage = prepareMessage(plaintextMessage, options);
+      securedMessage = prepareMessage(plaintextMessage, options);
+
+    } else {
+      printUsage();
+    }
+
   }
 
 
