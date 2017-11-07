@@ -31,11 +31,7 @@ import java.security.SecureRandom;
 import java.security.Signature;
 import java.security.SignatureException;
 import java.util.Scanner;
-
-
-
-
-
+import javax.xml.bind.DatatypeConverter;
 import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
@@ -43,6 +39,8 @@ import javax.crypto.spec.SecretKeySpec;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JTextField;
+import java.security.MessageDigest;
+
 
 
 public class Client {
@@ -84,6 +82,18 @@ public class Client {
       printUsage();
     }
 
+  }
+
+  // Pass in a String message and return a MD5 checksum
+  private static String getMD5(String message){
+    String result = null;
+    try{
+      MessageDigest digest = MessageDigest.getInstance("MD5");
+      byte[] hash = digest.digest(message.getBytes("UTF-8"));
+    } catch (Exception e){
+      e.printStackTrace();
+    }
+    return result;
   }
 
 
