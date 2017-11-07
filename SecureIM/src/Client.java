@@ -2,6 +2,7 @@ import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.DataOutputStream;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -17,6 +18,7 @@ import java.net.UnknownHostException;
 import java.net.HttpURLConnection;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.InvalidKeyException;
 import java.security.KeyPair;
@@ -30,9 +32,14 @@ import java.security.Signature;
 import java.security.SignatureException;
 import java.util.Scanner;
 
+
+
+
+
 import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JTextField;
@@ -142,24 +149,38 @@ public class Client {
     if(options[0]){
       //apply confidentiality
       try{
-        KeyGenerator KeyGen = KeyGenerator.getInstance("AES");
+    	  
+    	  Cipher AesCipher = Cipher.getInstance("AES");
+    	  Path path = Paths.get("symKey");
+    	  File f = new File("symKey");
+    	  SecretKey secKey; 
+    	  if(f.exists() && !f.isDirectory()) { 
+    		
+    	  byte[] key = Files.readAllBytes(path);
+    	  secKey = new SecretKeySpec(key, "AES");
+    	  }else{//if key not found, create key
+    	  KeyGenerator KeyGen = KeyGenerator.getInstance("AES");
+        
         KeyGen.init(128);
 
-        SecretKey SecKey = KeyGen.generateKey();
+        secKey = KeyGen.generateKey();
 
-        Cipher AesCipher = Cipher.getInstance("AES");
-
+        byte[] key = secKey.getEncoded();
+        FileOutputStream keyfos = new FileOutputStream("symKey");
+        keyfos.write(key);
+        keyfos.close();
+    	 }
 
         byte[] byteText = message.getBytes();
 
-        AesCipher.init(Cipher.ENCRYPT_MODE, SecKey);
+        AesCipher.init(Cipher.ENCRYPT_MODE, secKey);
         byte[] byteCipherText = AesCipher.doFinal(byteText);
         Files.write(Paths.get(encFileName), byteCipherText);
 
         //server side code
         byte[] cipherText = Files.readAllBytes(Paths.get(encFileName));
 
-        AesCipher.init(Cipher.DECRYPT_MODE, SecKey);
+        AesCipher.init(Cipher.DECRYPT_MODE, secKey);
         byte[] bytePlainText = AesCipher.doFinal(cipherText);
         Files.write(Paths.get(ptFileName), bytePlainText);
       }catch(Exception e){
@@ -183,6 +204,7 @@ public class Client {
   }
 
 
+  
   private static boolean[] getSecurityOptions(Scanner sc) {
     boolean options[] = new boolean[3];
     System.out.println("Enter what security Properties (For confidentiality and integrity, input 'ci'. For confidentiality integrity, and authentication, type 'cia')");
