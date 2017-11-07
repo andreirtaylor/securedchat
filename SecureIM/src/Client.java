@@ -11,11 +11,6 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintWriter;
-import java.net.HttpURLConnection;
-import java.net.Socket;
-import java.net.URL;
-import java.net.UnknownHostException;
-import java.net.HttpURLConnection;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -40,48 +35,67 @@ import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JTextField;
 import java.security.MessageDigest;
+import java.util.concurrent.TimeUnit;
 
 
 
 public class Client {
-  private final String USER_AGENT = "Mozilla/5.0";
+
   private static void printUsage(){
-      System.out.println("Please use command line arguments to specify if this is a client or a server");
-      System.out.println("run     java Client --server   to create a server");
-      System.out.println("run     java Client --client   to create a client");
+    System.out.println("Please use command line arguments to specify if this is a client or a server");
+    System.out.println("run     java Client --server   to create a server");
+    System.out.println("run     java Client --client   to create a client");
   }
+
   private static KeyPair pair;
   private static PrivateKey priv;
+
   public static PublicKey pub;
   public static String ptFileName = "plaintextMessage.txt";
   public static String encFileName = "encMessage";
+
+  // incomming and outgoing folders
+  public static String serverIncomming = "serverIncomming/";
+  public static String serverOutgoing = "serverOutgoing/";
+
+
   public static void main(String[] args) throws Exception {
     if(args.length != 1){
-
       printUsage();
       return;
     }
 
+    Scanner sc = new Scanner(System.in);
     if(args[0].equals("--server")){ 
       System.out.println("Starting server");
+
+      while(true){
+        doServer(sc);
+      }
     } else if (args[0].equals("--client")){
       System.out.println("Starting client");
-      Scanner sc = new Scanner(System.in);
-      boolean options[] = new boolean[3];
-      String securedMessage = "";
 
+      while(true){
 
-      options = getSecurityOptions(sc);
-      String plaintextMessage = getUserMessage(sc);
-      sc.close();
-      establishSecureConnection();
+        boolean[] options = getSecurityOptions(sc);
+        String plaintextMessage = getUserMessage(sc);
+        establishSecureConnection();
 
-      securedMessage = prepareMessage(plaintextMessage, options);
-
+        String securedMessage = prepareMessage(plaintextMessage, options);
+        //System.out.println(securedMessage);
+      }
     } else {
       printUsage();
     }
 
+  }
+
+  private static void doServer(Scanner sc) throws InterruptedException {
+     int len = new File(serverIncomming).listFiles().length;
+     if(len > 0){
+        System.out.println(len);
+     }
+     TimeUnit.SECONDS.sleep(1);
   }
 
   // Pass in a String message and return a MD5 checksum
@@ -147,10 +161,6 @@ public class Client {
         e.printStackTrace();
       }
 
-
-
-
-
     }
     if(options[2]){
       //apply authentication
@@ -159,27 +169,27 @@ public class Client {
     if(options[0]){
       //apply confidentiality
       try{
-    	  
-    	  Cipher AesCipher = Cipher.getInstance("AES");
-    	  Path path = Paths.get("symKey");
-    	  File f = new File("symKey");
-    	  SecretKey secKey; 
-    	  if(f.exists() && !f.isDirectory()) { 
-    		
-    	  byte[] key = Files.readAllBytes(path);
-    	  secKey = new SecretKeySpec(key, "AES");
-    	  }else{//if key not found, create key
-    	  KeyGenerator KeyGen = KeyGenerator.getInstance("AES");
-        
-        KeyGen.init(128);
 
-        secKey = KeyGen.generateKey();
+        Cipher AesCipher = Cipher.getInstance("AES");
+        Path path = Paths.get("symKey");
+        File f = new File("symKey");
+        SecretKey secKey; 
+        if(f.exists() && !f.isDirectory()) { 
 
-        byte[] key = secKey.getEncoded();
-        FileOutputStream keyfos = new FileOutputStream("symKey");
-        keyfos.write(key);
-        keyfos.close();
-    	 }
+          byte[] key = Files.readAllBytes(path);
+          secKey = new SecretKeySpec(key, "AES");
+        }else{//if key not found, create key
+          KeyGenerator KeyGen = KeyGenerator.getInstance("AES");
+
+          KeyGen.init(128);
+
+          secKey = KeyGen.generateKey();
+
+          byte[] key = secKey.getEncoded();
+          FileOutputStream keyfos = new FileOutputStream("symKey");
+          keyfos.write(key);
+          keyfos.close();
+        }
 
         byte[] byteText = message.getBytes();
 
@@ -205,16 +215,16 @@ public class Client {
   private static void createKeyPair() throws NoSuchAlgorithmException,
           NoSuchProviderException {
             KeyPairGenerator keyGen = KeyPairGenerator.getInstance("DSA", "SUN");
-            SecureRandom random;
-            random = SecureRandom.getInstance("SHA1PRNG", "SUN");
+            SecureRandom random = SecureRandom.getInstance("SHA1PRNG", "SUN");
             keyGen.initialize(1024, random);
+            
             pair = keyGen.generateKeyPair();
             priv = pair.getPrivate();
             pub = pair.getPublic();
   }
 
 
-  
+
   private static boolean[] getSecurityOptions(Scanner sc) {
     boolean options[] = new boolean[3];
     System.out.println("Enter what security Properties (For confidentiality and integrity, input 'ci'. For confidentiality integrity, and authentication, type 'cia')");
