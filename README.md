@@ -1,21 +1,24 @@
 # securedchat
-Toy project to do clent server authentication
+Toy project to do do secure local messaging.
 
 The server and client run in different processes. They need to be run in different
-command line terminals.
+command line terminals. They use AES encryption to perform authentication although
+this is easliy changed;
 
 # Sever
 
-Compile the server in the server folder
+Compile the client/server in the src folder
 
 ```
-cd server
-javac Server.java
+javac SecureChat.java
 ```
-then run the server
 
-`java Server`
+then run the server with 
 
-You should see the following output when running the server
+`java SecureChat --server`
 
-![](assets/README-88581.png)
+then run the client (in a separate terminal)
+
+`java SecureChat --client`
+
+
