@@ -52,12 +52,14 @@ public class Client {
 
   public static PublicKey pub;
   public static String ptFileName = "plaintextMessage.txt";
-  public static String encFileName = "encMessage";
 
   // incomming and outgoing folders
   public static String serverIncomming = "serverIncomming/";
   public static String serverOutgoing = "serverOutgoing/";
 
+
+  // where to save files
+  public static String encFileName = "encMessage";
 
   public static void main(String[] args) throws Exception {
     if(args.length != 1){
@@ -81,7 +83,7 @@ public class Client {
         String plaintextMessage = getUserMessage(sc);
         establishSecureConnection();
 
-        String securedMessage = prepareMessage(plaintextMessage, options);
+        String securedMessage = prepareMessage(plaintextMessage, options, sc);
         //System.out.println(securedMessage);
       }
     } else {
@@ -91,11 +93,27 @@ public class Client {
   }
 
   private static void doServer(Scanner sc) throws InterruptedException {
-     int len = new File(serverIncomming).listFiles().length;
-     if(len > 0){
-        System.out.println(len);
-     }
-     TimeUnit.SECONDS.sleep(1);
+    int len = new File(serverIncomming).listFiles().length;
+    if(len > 0){
+      String encryptedMessage = serverIncomming + encFileName;
+      try{
+        //server side code
+
+        byte[] cipherText = Files.readAllBytes(Paths.get(encryptedMessage));
+        Cipher AesCipher = Cipher.getInstance("AES");
+        AesCipher.init(Cipher.DECRYPT_MODE, generateOrGetSecretKey());
+
+        byte[] bytePlainText = AesCipher.doFinal(cipherText);
+        System.out.println(new String(bytePlainText, "UTF-8"));
+
+      } catch (Exception e){
+        e.printStackTrace();
+      }
+
+      File f = new File(encryptedMessage);
+      f.delete();
+    }
+    TimeUnit.SECONDS.sleep(1);
   }
 
   // Pass in a String message and return a MD5 checksum
@@ -125,7 +143,8 @@ public class Client {
   }
 
 
-  private static String prepareMessage(String message,boolean[] options) {
+  private static String prepareMessage(String message,boolean[] options, Scanner sc) {
+    byte[] BytesToWrite = message.getBytes();
     if(options[1]){
       //apply integrity
 
@@ -164,51 +183,62 @@ public class Client {
     }
     if(options[2]){
       //apply authentication
-
+      System.out.println("Exter your password for authentication");
+      String password = sc.nextLine();
+      message += "\n" + password;
     }
     if(options[0]){
       //apply confidentiality
       try{
-
         Cipher AesCipher = Cipher.getInstance("AES");
-        Path path = Paths.get("symKey");
-        File f = new File("symKey");
-        SecretKey secKey; 
-        if(f.exists() && !f.isDirectory()) { 
+        AesCipher.init(Cipher.ENCRYPT_MODE, generateOrGetSecretKey());
 
-          byte[] key = Files.readAllBytes(path);
-          secKey = new SecretKeySpec(key, "AES");
-        }else{//if key not found, create key
-          KeyGenerator KeyGen = KeyGenerator.getInstance("AES");
-
-          KeyGen.init(128);
-
-          secKey = KeyGen.generateKey();
-
-          byte[] key = secKey.getEncoded();
-          FileOutputStream keyfos = new FileOutputStream("symKey");
-          keyfos.write(key);
-          keyfos.close();
-        }
-
-        byte[] byteText = message.getBytes();
-
-        AesCipher.init(Cipher.ENCRYPT_MODE, secKey);
-        byte[] byteCipherText = AesCipher.doFinal(byteText);
-        Files.write(Paths.get(encFileName), byteCipherText);
-
-        //server side code
-        byte[] cipherText = Files.readAllBytes(Paths.get(encFileName));
-
-        AesCipher.init(Cipher.DECRYPT_MODE, secKey);
-        byte[] bytePlainText = AesCipher.doFinal(cipherText);
-        Files.write(Paths.get(ptFileName), bytePlainText);
+        BytesToWrite = AesCipher.doFinal(message.getBytes());
       }catch(Exception e){
 
       }
 
     }
+    // always wrtite the file
+    try{
+      Files.write(Paths.get(serverIncomming + encFileName), BytesToWrite);
+    } catch (Exception e) {
+      // TODO Auto-generated catch block
+      e.printStackTrace();
+    }
     return message;
+  }
+
+  private static SecretKey generateOrGetSecretKey(){
+    try{
+      SecretKey secKey;
+      Path path = Paths.get("symKey");
+      File f = new File("symKey");
+
+
+      if(f.exists() && !f.isDirectory()) { 
+        System.out.println("AES key exists, using previous key");
+        byte[] key = Files.readAllBytes(path);
+        secKey = new SecretKeySpec(key, "AES");
+      }else{//if key not found, create key
+        System.out.println("Generating new AES Key");
+        KeyGenerator KeyGen = KeyGenerator.getInstance("AES");
+
+        KeyGen.init(128);
+
+        secKey = KeyGen.generateKey();
+
+        byte[] key = secKey.getEncoded();
+        FileOutputStream keyfos = new FileOutputStream("symKey");
+        keyfos.write(key);
+        keyfos.close();
+      }
+      return secKey;
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+
+    return null;
   }
 
 
@@ -217,7 +247,7 @@ public class Client {
             KeyPairGenerator keyGen = KeyPairGenerator.getInstance("DSA", "SUN");
             SecureRandom random = SecureRandom.getInstance("SHA1PRNG", "SUN");
             keyGen.initialize(1024, random);
-            
+
             pair = keyGen.generateKeyPair();
             priv = pair.getPrivate();
             pub = pair.getPublic();
