@@ -69,7 +69,7 @@ public class SecureChat {
     }
 
     Scanner sc = new Scanner(System.in);
-    if(args[0].equals("--server")){ 
+    if(args[0].equals("--server")){
       System.out.println("Starting server");
 
       while(true){
@@ -129,7 +129,7 @@ public class SecureChat {
     int len = new File(serverIncomming).listFiles().length;
     if(len >= 2){
       //TimeUnit.MILLISECONDS.sleep(5000);
-      TimeUnit.MILLISECONDS.sleep(500);
+      TimeUnit.MILLISECONDS.sleep(800);
 
       String encryptedMessage = serverIncomming + encFileName;
       String encryptedCheckSum = serverIncomming + checkSumFile;
@@ -138,20 +138,19 @@ public class SecureChat {
         //server side code
         boolean[] options = getMessageOptions();
 
-        String text = "";
+        byte[] b = Files.readAllBytes(Paths.get(encryptedMessage));
+        String text = new String(b, "UTF-8");
 
         // if confidentiality
         if(options[0]){
-          byte[] b = Files.readAllBytes(Paths.get(encryptedMessage));
+          byte[] buf = Files.readAllBytes(Paths.get(encryptedMessage));
           Cipher AesCipher = Cipher.getInstance("AES");
           AesCipher.init(Cipher.DECRYPT_MODE, generateOrGetSecretKey());
 
-          byte[] bytePlainText = AesCipher.doFinal(b);
+          byte[] bytePlainText = AesCipher.doFinal(buf);
           text = new String(bytePlainText, "UTF-8");
-        } else {
-          byte[] b = Files.readAllBytes(Paths.get(encryptedMessage));
-          text = new String(b, "UTF-8");
         }
+        System.out.println(text);
 
         if(options[1]){
           byte[] cs = Files.readAllBytes(Paths.get(encryptedCheckSum));
@@ -164,7 +163,7 @@ public class SecureChat {
 
           if(! sentCS.equals(generatedCS)){
             System.out.println("The checksum does not match, invalid message");
-            return;
+            throw new Exception("BOOOOO");
           }
         }
 
@@ -182,7 +181,7 @@ public class SecureChat {
 
 
       } catch (Exception e){
-        e.printStackTrace();
+        //e.printStackTrace();
       }
 
       // remove all files
@@ -221,7 +220,6 @@ public class SecureChat {
 
 
   private static String prepareMessage(String message,boolean[] options, Scanner sc) {
-    byte[] BytesToWrite = message.getBytes();
 
     if(options[2]){
       //apply authentication
@@ -229,6 +227,8 @@ public class SecureChat {
       String password = sc.nextLine();
       message += "\n" + password;
     }
+
+    byte[] BytesToWrite = message.getBytes();
 
     if(options[0]){
       //apply confidentiality
@@ -271,6 +271,7 @@ public class SecureChat {
       try{
         //apply integrity
         byte[] hashMessage = getMD5(message);
+        System.out.println(message);
 
         // if you are using confidentiality
         Cipher AesCipher = Cipher.getInstance("AES");
@@ -302,7 +303,7 @@ public class SecureChat {
       File f = new File("symKey");
 
 
-      if(f.exists() && !f.isDirectory()) { 
+      if(f.exists() && !f.isDirectory()) {
         //System.out.println("AES key exists, using previous key");
         byte[] key = Files.readAllBytes(path);
         secKey = new SecretKeySpec(key, "AES");
