@@ -39,7 +39,7 @@ import java.util.concurrent.TimeUnit;
 
 
 
-public class Client {
+public class SecureChat {
 
   private static void printUsage(){
     System.out.println("Please use command line arguments to specify if this is a client or a server");
@@ -51,7 +51,6 @@ public class Client {
   private static PrivateKey priv;
 
   public static PublicKey pub;
-  public static String ptFileName = "plaintextMessage.txt";
 
   // incomming and outgoing folders
   public static String serverIncomming = "serverIncomming/";
@@ -60,6 +59,8 @@ public class Client {
 
   // where to save files
   public static String encFileName = "encMessage";
+  public static String checkSumFile = "checkSumFile";
+  public static String optionsFile = "optionsFile";
 
   public static void main(String[] args) throws Exception {
     if(args.length != 1){
@@ -117,21 +118,20 @@ public class Client {
   }
 
   // Pass in a String message and return a MD5 checksum
-  private static String getMD5(String message){
-    String result = null;
+  private static byte[] getMD5(String message){
+    byte[] hash = null;
     try{
       MessageDigest digest = MessageDigest.getInstance("MD5");
-      byte[] hash = digest.digest(message.getBytes("UTF-8"));
+      hash = digest.digest(message.getBytes("UTF-8"));
     } catch (Exception e){
       e.printStackTrace();
     }
-    return result;
+    return hash;
   }
 
 
   private static String getUserMessage(Scanner sc) {
     System.out.println("Enter a message");
-
     String message = sc.nextLine();
     return message;
   }
@@ -145,48 +145,57 @@ public class Client {
 
   private static String prepareMessage(String message,boolean[] options, Scanner sc) {
     byte[] BytesToWrite = message.getBytes();
+
+    // write the options file
+    try{
+      String s = "";
+      for(int i = 0; i < options.length ;  ++i){
+        if(options[i]){
+          s += "1";
+        } else {
+          s += "0";
+        }
+      }
+
+      // always encrypt the options file
+      Cipher AesCipher = Cipher.getInstance("AES");
+      AesCipher.init(Cipher.ENCRYPT_MODE, generateOrGetSecretKey());
+
+      Files.write(Paths.get(serverIncomming + optionsFile)
+                  , AesCipher.doFinal(s.getBytes()));
+
+    } catch (Exception e) {
+      // TODO Auto-generated catch block
+      e.printStackTrace();
+    }
+
+
     if(options[1]){
-      //apply integrity
+      try{
+        //apply integrity
+        byte[] hashMessage = getMD5(message);
 
-      try {
-        createKeyPair();
+        // if you are using confidentiality
+        if(options[0]){
+          Cipher AesCipher = Cipher.getInstance("AES");
+          AesCipher.init(Cipher.ENCRYPT_MODE, generateOrGetSecretKey());
 
-        //sign message witha  signature
-        Signature dsa = Signature.getInstance("SHA1withDSA", "SUN");
-        dsa.initSign(priv);
-        //InputStream stream = new ByteArrayInputStream(message.getBytes(StandardCharsets.UTF_8.name()));
-
-        FileInputStream msgFis = new FileInputStream("message");
-        BufferedInputStream bufin = new BufferedInputStream(msgFis);
-        byte[] buffer = new byte[1024];
-        int len;
-        while ((len = bufin.read(buffer)) >= 0) {
-          dsa.update(buffer, 0, len);
-        };
-        bufin.close();
-        //save signature to a file
-        byte[] realSig = dsa.sign();
-        FileOutputStream sigfos = new FileOutputStream("sig");
-        sigfos.write(realSig);
-        sigfos.close();
-
-        /* save the public key in a file */
-        byte[] key = pub.getEncoded();
-        FileOutputStream keyfos = new FileOutputStream("clientpk");
-        keyfos.write(key);
-        keyfos.close();
+          hashMessage = AesCipher.doFinal(hashMessage);
+        }
+        Files.write(Paths.get(serverIncomming + checkSumFile), hashMessage);
       } catch (Exception e) {
         // TODO Auto-generated catch block
         e.printStackTrace();
       }
-
     }
+
     if(options[2]){
       //apply authentication
       System.out.println("Exter your password for authentication");
       String password = sc.nextLine();
       message += "\n" + password;
     }
+
     if(options[0]){
       //apply confidentiality
       try{
@@ -238,22 +247,9 @@ public class Client {
       e.printStackTrace();
     }
 
+    // should never get here
     return null;
   }
-
-
-  private static void createKeyPair() throws NoSuchAlgorithmException,
-          NoSuchProviderException {
-            KeyPairGenerator keyGen = KeyPairGenerator.getInstance("DSA", "SUN");
-            SecureRandom random = SecureRandom.getInstance("SHA1PRNG", "SUN");
-            keyGen.initialize(1024, random);
-
-            pair = keyGen.generateKeyPair();
-            priv = pair.getPrivate();
-            pub = pair.getPublic();
-  }
-
-
 
   private static boolean[] getSecurityOptions(Scanner sc) {
     boolean options[] = new boolean[3];
