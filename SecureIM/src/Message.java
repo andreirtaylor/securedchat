@@ -91,13 +91,35 @@ public class Message {
 		}
 	}
 
+	public void readPlainTextMessageFile(String messageFilePath) {
+		try {
+			byte[] fileBytes = Files.readAllBytes(Paths.get(messageFilePath));
+
+			String messageContent = new String(fileBytes, "UTF-8");
+
+			String t = messageContent.substring(0, 1);
+			type = Integer.parseInt(t);
+
+			// remove the 2 first chars that indicated message type
+			contents = messageContent.substring(2);
+
+		}
+		catch(Exception e) {
+			e.printStackTrace();
+		}		
+	}
+
+	/*
+	 * Does encryption and checks checksum
+	 * Should only be used for MESSAGE_TYPE_NORMAL
+	 */
 	public void readMessageFile(String messageFilePath, boolean[] options) {
 
 		try {
 			byte[] fileBytes = Files.readAllBytes(Paths.get(messageFilePath));
 
 			// decrypt
-			if(options[0] && type == MESSAGE_TYPE_NORMAL) {
+			if(options[0]) {
 				System.out.println("decrypting");
 				Cipher aesCipher = Cipher.getInstance("AES");
 				aesCipher.init(Cipher.DECRYPT_MODE, generateOrGetSecretKey());
