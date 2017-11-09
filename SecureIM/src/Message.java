@@ -1,5 +1,12 @@
+import java.io.File;
+import java.io.FileOutputStream;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.Files;
+import javax.crypto.Cipher;
+import javax.crypto.KeyGenerator;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
 
 public class Message {
 
@@ -42,8 +49,37 @@ public class Message {
 
 		byte[] fileBytes = messageContent.getBytes();
 		
-		// do encryption, etc
-		// ...
+		// encrypt message (apply confidentiality)
+		if(options[0] && type == MESSAGE_TYPE_NORMAL) {
+			try {
+				System.out.println("encrypting");
+				Cipher aesCipher = Cipher.getInstance("AES");
+				aesCipher.init(Cipher.ENCRYPT_MODE, generateOrGetSecretKey());
+				fileBytes = aesCipher.doFinal(fileBytes);
+			}
+			catch(Exception e) {
+				e.printStackTrace();
+			}
+		}
+
+		// // use checksum (apply integrity)
+		// if(options[1]) {
+		// 	try {
+		// 		byte[] hashMessage = getMD5(messageContent);
+
+		// 		// if you are using confidentiality
+		// 		Cipher aesCipher = Cipher.getInstance("AES");
+		// 		aesCipher.init(Cipher.ENCRYPT_MODE, generateOrGetSecretKey());
+
+		// 		hashMessage = aesCipher.doFinal(hashMessage);
+
+		// 		Files.write(Paths.get(serverIncomming + checkSumFile), hashMessage);
+		// 	}
+		// 	catch(Exception e) {
+		// 		e.printStackTrace();
+		// 	}
+		// }
+		
 
 		try {
 			Files.write(Paths.get(messageFilePath), fileBytes);
@@ -58,7 +94,18 @@ public class Message {
 		try {
 			byte[] fileBytes = Files.readAllBytes(Paths.get(messageFilePath));
 
-			// do options to decrypt
+			// decrypt
+			if(options[0] && type == MESSAGE_TYPE_NORMAL) {
+				System.out.println("decrypting");
+				Cipher aesCipher = Cipher.getInstance("AES");
+				aesCipher.init(Cipher.DECRYPT_MODE, generateOrGetSecretKey());
+				fileBytes = aesCipher.doFinal(fileBytes);
+			}
+
+			// checksum
+			if(options[1]) {
+
+			}
 
 			String messageContent = new String(fileBytes, "UTF-8");
 
@@ -73,6 +120,41 @@ public class Message {
 			e.printStackTrace();
 		}
 
+	}
+
+	private static SecretKey generateOrGetSecretKey(){
+		try {
+			SecretKey secKey;
+			Path path = Paths.get("symKey");
+			File f = new File("symKey");
+
+			if(f.exists() && !f.isDirectory()) {
+				// key found
+				byte[] key = Files.readAllBytes(path);
+				secKey = new SecretKeySpec(key, "AES");
+			}
+			else {
+				//key not found, create key
+				System.out.println("Generating new AES Key");
+				KeyGenerator KeyGen = KeyGenerator.getInstance("AES");
+
+				KeyGen.init(128);
+
+				secKey = KeyGen.generateKey();
+
+				byte[] key = secKey.getEncoded();
+				FileOutputStream keyfos = new FileOutputStream("symKey");
+				keyfos.write(key);
+				keyfos.close();
+			}
+			return secKey;
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+		}
+
+		// should never get here
+		return null;
 	}
 
 }
