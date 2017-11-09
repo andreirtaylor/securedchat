@@ -90,46 +90,61 @@ public class SecureChat2 {
 		File f = new File(messageFilePath);
 
 		if(f.exists()) {
-			Message m = new Message();
-			m.readMessageFile(messageFilePath);
-			m
-			if(m.getType() == Message.MESSAGE_TYPE_INIT) {
-				f.delete();
-
-				boolean[] clientOptions = new boolean[3];
-				setOptions(m.getContents(), clientOptions);
-
-				boolean match = true;
-				// check if CIA options match
-				for(int i = 0; i < options.length; i++) {
-					if(options[i] != clientOptions[i]) {
-						match = false;
-						break;
-					}
-				}
-
-				// if options match, send a confirmation message back
-				if(match) {
-					messageFilePath = clientInboxDir + messageName;
-					Message confirmMessage = new Message(Message.MESSAGE_TYPE_CONFIRM_INIT, "");
-					confirmMessage.writeMessageFile(messageFilePath);
-				}
-				else {
-					System.out.println("Options don't match. Cannot create connection.");
-					start = false;	
-				}
-
-			}
-			else {
-				start = false;
-			}
+			authenticateClientMessage(messageFilePath, f);
 		}
 
 		// if authentication is used check password
 		if(options[2]) {
-			
+			authenticateClientMessage(messageFilePath, f);
 		}
 
+	}
+
+	private static void authenticateClientMessage(String messageFilePath, File f) {
+		Message m = new Message();
+		m.readMessageFile(messageFilePath, options);//TODO will decrypt message
+		
+		if(m.getType() == Message.MESSAGE_TYPE_OPTIONS) {//if the client sent a request (not an IM message)
+			f.delete();
+
+			
+			
+			boolean[] clientOptions = new boolean[3];
+			setOptions(m.getContents(), clientOptions);
+
+			boolean match = true;
+			// check if CIA options match
+			for(int i = 0; i < options.length; i++) {
+				if(options[i] != clientOptions[i]) {
+					match = false;
+					break;
+				}
+			}
+
+			// if options match, send a confirmation message back
+			if(match) {
+				messageFilePath = clientInboxDir + messageName;
+				Message confirmMessage = new Message(Message.MESSAGE_TYPE_CONFIRM, "");
+				confirmMessage.writeMessageFile(messageFilePath, options);
+			}
+			else {
+				System.out.println("Options don't match. Cannot create connection.");
+				start = false;	
+			}
+
+		}else if(m.getType() == Message.MESSAGE_TYPE_PASSWORD){//if client sent a password
+			//compare to pw table
+			if(m.getContents().equals("clientpw")){
+				
+
+				
+			}
+			
+			
+		}
+		else {
+			start = false;
+		}
 	}
 
 	private static void initClient() {
@@ -155,9 +170,9 @@ public class SecureChat2 {
 
 		if(f.exists()) {
 			Message m = new Message();
-			m.readMessageFile(messageFilePath);
+			m.readMessageFile(messageFilePath, options);
 			f.delete();
-			if(m.getType() == Message.MESSAGE_TYPE_CONFIRM_INIT) {
+			if(m.getType() == Message.MESSAGE_TYPE_CONFIRM) {
 				System.out.println("Session established successfully.");
 			}
 			else {
@@ -175,24 +190,24 @@ public class SecureChat2 {
 				String password = scanner.nextLine();
 
 				//send password message
-				Message m = new Message(Message.MESSAGE_TYPE_INIT, password);
-				m.writeMessageFile(messageFilePath);
+				Message m = new Message(Message.MESSAGE_TYPE_PASSWORD, password);
+				m.writeMessageFile(messageFilePath, options);
 
 				//wait for server to respond
-				int numFiles = 0;
+				numFiles = 0;
 				while(numFiles == 0) {
 					numFiles = new File(clientInboxDir).listFiles(hiddenFileFilter).length;
 				}
 
 				// check file exists and that it is the correct message type
-				String messageFilePath = clientInboxDir + messageName;
-				File f = new File(messageFilePath);
+				messageFilePath = clientInboxDir + messageName;
+				f = new File(messageFilePath);
 
 				if(f.exists()) {
-					Message m = new Message();
-					m.readMessageFile(messageFilePath);
+					m = new Message();
+					m.readMessageFile(messageFilePath, options);
 					f.delete();
-					if(m.getType() == Message.MESSAGE_TYPE_CONFIRM_INIT) {
+					if(m.getType() == Message.MESSAGE_TYPE_CONFIRM) {
 						success = true;
 						System.out.println("Password correct.");
 					}
@@ -245,8 +260,8 @@ public class SecureChat2 {
 			}
 		}
 
-		Message m = new Message(Message.MESSAGE_TYPE_INIT, optionsString);
-		m.writeMessageFile(messageFilePath);
+		Message m = new Message(Message.MESSAGE_TYPE_OPTIONS, optionsString);
+		m.writeMessageFile(messageFilePath, options);
 	}
 
 	private static void printUsage(){

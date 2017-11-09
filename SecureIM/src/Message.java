@@ -3,10 +3,10 @@ import java.nio.file.Files;
 
 public class Message {
 
-	public static final int MESSAGE_TYPE_INIT = 0; // initialization message
+	public static final int MESSAGE_TYPE_OPTIONS = 0; // initialization message
 	public static final int MESSAGE_TYPE_NORMAL = 1; // regular message
-	public static final int MESSAGE_TYPE_CONFIRM_INIT = 2; // initializatioin confirmation message
-
+	public static final int MESSAGE_TYPE_CONFIRM = 2; // initializatioin confirmation message
+	public static final int MESSAGE_TYPE_PASSWORD = 3; // initializatioin confirmation message
 	public static boolean[] options = new boolean[3];
 
 	private int type;
@@ -35,13 +35,13 @@ public class Message {
 		this.contents = contents;
 	}
 
-	public void writeMessageFile(String messageFilePath, options) {
+	public void writeMessageFile(String messageFilePath, boolean[] options) {
 
 		// write message type as the first line
 		String messageContent = type + "\n" + contents;
 
 		byte[] fileBytes = messageContent.getBytes();
-
+		
 		// do encryption, etc
 		// ...
 
@@ -53,7 +53,7 @@ public class Message {
 		}
 	}
 
-	public void readMessageFile(String messageFilePath, options) {
+	public void readMessageFile(String messageFilePath, boolean[] options) {
 
 		try {
 			byte[] fileBytes = Files.readAllBytes(Paths.get(messageFilePath));
