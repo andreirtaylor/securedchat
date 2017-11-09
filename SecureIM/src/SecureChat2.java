@@ -10,6 +10,7 @@ public class SecureChat2 {
 
 	private static Scanner scanner;
 	private static boolean start = false;
+	private static boolean passwordNeeded = false;
 	private static boolean[] options = new boolean[3];
 
 	public static FileFilter hiddenFileFilter = new FileFilter() {
@@ -80,10 +81,7 @@ public class SecureChat2 {
 		System.out.println("Waiting for client.");
 
 		// wait for client initialize
-		int numFiles = 0;
-		while(numFiles == 0) {
-			numFiles = new File(serverInboxDir).listFiles(hiddenFileFilter).length;
-		}
+		waitForMessage(serverInboxDir);
 
 		// read CIA options in message
 		String messageFilePath = serverInboxDir + messageName;
@@ -92,20 +90,33 @@ public class SecureChat2 {
 		if(f.exists()) {
 			authenticateClientMessage(messageFilePath, f);
 		}
-
+		
 		// if authentication is used check password
-		if(options[2]) {
+		while(passwordNeeded) {
+			waitForMessage(serverInboxDir);
+			f = new File(messageFilePath);
+			if(f.exists()){
 			authenticateClientMessage(messageFilePath, f);
+			}
 		}
 
 	}
 
+	private static void waitForMessage(String inboxDir) {
+		int numFiles = 0;
+		while(numFiles == 0) {
+			numFiles = new File(inboxDir).listFiles(hiddenFileFilter).length;
+		}
+	}
+
 	private static void authenticateClientMessage(String messageFilePath, File f) {
 		Message m = new Message();
+		boolean messageAuthenticated = false;
 		m.readMessageFile(messageFilePath, options);//TODO will decrypt message
-		
+		System.out.println("authmessage");
+		f.delete();
 		if(m.getType() == Message.MESSAGE_TYPE_OPTIONS) {//if the client sent a request (not an IM message)
-			f.delete();
+			
 
 			
 			
@@ -123,9 +134,7 @@ public class SecureChat2 {
 
 			// if options match, send a confirmation message back
 			if(match) {
-				messageFilePath = clientInboxDir + messageName;
-				Message confirmMessage = new Message(Message.MESSAGE_TYPE_CONFIRM, "");
-				confirmMessage.writeMessageFile(messageFilePath, options);
+				messageAuthenticated = true;
 			}
 			else {
 				System.out.println("Options don't match. Cannot create connection.");
@@ -135,9 +144,9 @@ public class SecureChat2 {
 		}else if(m.getType() == Message.MESSAGE_TYPE_PASSWORD){//if client sent a password
 			//compare to pw table
 			if(m.getContents().equals("clientpw")){
-				
-
-				
+				System.out.println("correct password.");
+				messageAuthenticated = true;
+				passwordNeeded = false;
 			}
 			
 			
@@ -145,14 +154,23 @@ public class SecureChat2 {
 		else {
 			start = false;
 		}
+		if(messageAuthenticated){
+			System.out.println("message authenticated");
+		messageFilePath = clientInboxDir + messageName;
+		Message confirmMessage = new Message(Message.MESSAGE_TYPE_CONFIRM, "");
+		confirmMessage.writeMessageFile(messageFilePath, options);
+	
+		}else{
+			System.out.println("message authenticated");
+		messageFilePath = clientInboxDir + messageName;
+		Message confirmMessage = new Message(Message.MESSAGE_TYPE_WRONG_PASSWORD, "");
+		confirmMessage.writeMessageFile(messageFilePath, options);
+		}
 	}
 
 	private static void initClient() {
 		// select CIA options
 		getSecurityOptions();
-
-		// check password
-		// ...
 
 		// attempt to create establish connection (send CIA options)
 		sendOptionsMessage(serverInboxDir + messageName);
@@ -160,9 +178,7 @@ public class SecureChat2 {
 		System.out.println("Waiting for confirmation from server.");
 		// wait for confirmation message
 		int numFiles = 0;
-		while(numFiles == 0) {
-			numFiles = new File(clientInboxDir).listFiles(hiddenFileFilter).length;
-		}
+		waitForMessage(clientInboxDir);
 
 		// check file exists and that it is the correct message type
 		String messageFilePath = clientInboxDir + messageName;
@@ -173,7 +189,7 @@ public class SecureChat2 {
 			m.readMessageFile(messageFilePath, options);
 			f.delete();
 			if(m.getType() == Message.MESSAGE_TYPE_CONFIRM) {
-				System.out.println("Session established successfully.");
+				System.out.println("Connection established successfully.");
 			}
 			else {
 				start = false;
@@ -182,22 +198,20 @@ public class SecureChat2 {
 
 		// if authentication is used check password
 		if(options[2]) {
-
+			passwordNeeded = true;
 			boolean success = false;
 
 			while(!success) {
 				System.out.println("Enter password:");
 				String password = scanner.nextLine();
-
+				messageFilePath = serverInboxDir + messageName;
 				//send password message
+				
 				Message m = new Message(Message.MESSAGE_TYPE_PASSWORD, password);
 				m.writeMessageFile(messageFilePath, options);
 
 				//wait for server to respond
-				numFiles = 0;
-				while(numFiles == 0) {
-					numFiles = new File(clientInboxDir).listFiles(hiddenFileFilter).length;
-				}
+				waitForMessage(clientInboxDir);
 
 				// check file exists and that it is the correct message type
 				messageFilePath = clientInboxDir + messageName;
@@ -210,6 +224,8 @@ public class SecureChat2 {
 					if(m.getType() == Message.MESSAGE_TYPE_CONFIRM) {
 						success = true;
 						System.out.println("Password correct.");
+						passwordNeeded = false;
+						start = true;
 					}
 					else {
 						success = false;
@@ -218,6 +234,8 @@ public class SecureChat2 {
 				}
 			}
 
+		}else{//if no password needed, start IM functionality
+			start = true;
 		}
 	}
 
@@ -237,6 +255,7 @@ public class SecureChat2 {
 		}
 		if(input.contains("a")) {
 			options[2] = true;
+			passwordNeeded = true;
 		}
 	}
 

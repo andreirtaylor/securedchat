@@ -6,7 +6,9 @@ public class Message {
 	public static final int MESSAGE_TYPE_OPTIONS = 0; // initialization message
 	public static final int MESSAGE_TYPE_NORMAL = 1; // regular message
 	public static final int MESSAGE_TYPE_CONFIRM = 2; // initializatioin confirmation message
-	public static final int MESSAGE_TYPE_PASSWORD = 3; // initializatioin confirmation message
+	public static final int MESSAGE_TYPE_PASSWORD = 3; // password
+	public static final int MESSAGE_TYPE_WRONG_PASSWORD = 4; // password failed message
+
 	public static boolean[] options = new boolean[3];
 
 	private int type;
