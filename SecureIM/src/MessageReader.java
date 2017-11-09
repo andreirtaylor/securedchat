@@ -60,7 +60,7 @@ public class MessageReader extends Thread {
 							checksumMessage.readMessageFile(checksumMessageFilePath, options, true);
 							f.delete();
 
-							String newMessageHash = new String(SecureChat2.getMD5(m.getContents()), "UTF-8");
+							String newMessageHash = new String(SecureChat2.getHash(m.getContents()), "UTF-8");
 
 							if(checksumMessage.getContents().equals(newMessageHash)) {
 								println("Checksum successful");
@@ -76,8 +76,6 @@ public class MessageReader extends Thread {
 						// always valid if checksum isn't used
 						validMessage = true;
 					}
-
-					erase(messagePrompt.length() + inputBuffer.length());
 
 					if(validMessage) {
 						println("received message: " + m.getContents());

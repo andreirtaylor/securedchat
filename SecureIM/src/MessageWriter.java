@@ -32,7 +32,7 @@ public class MessageWriter extends Thread {
 			if(options[1]) {
 				try {
 					String hashMessagePath = messageFilePath + SecureChat2.checksumExtension;
-					String hashMessage = new String(SecureChat2.getMD5(input), "UTF-8");
+					String hashMessage = new String(SecureChat2.getHash(input), "UTF-8");
 
 					// always force encrypt the checksum
 					m = new Message(Message.MESSAGE_TYPE_NORMAL, hashMessage);

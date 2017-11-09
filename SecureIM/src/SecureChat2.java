@@ -287,10 +287,10 @@ public class SecureChat2 {
 	}
 
 	// Pass in a String message and return a MD5 checksum
-	protected static byte[] getMD5(String message){
+	protected static byte[] getHash(String message){
 		byte[] hash = null;
 		try {
-			MessageDigest digest = MessageDigest.getInstance("MD5");
+			MessageDigest digest = MessageDigest.getInstance("SHA-1");
 			hash = digest.digest(message.getBytes("UTF-8"));
 		}
 		catch (Exception e){
