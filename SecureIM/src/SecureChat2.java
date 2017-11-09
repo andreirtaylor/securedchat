@@ -1,12 +1,14 @@
 import java.util.Scanner;
 import java.io.File;
 import java.io.FileFilter;
+import java.security.MessageDigest;
 
 public class SecureChat2 {
 
 	private static final String serverInboxDir = "serverInbox/";
 	private static final String clientInboxDir = "clientInbox/";
-	private static final String messageName = "message";
+	protected static final String messageName = "message";
+	protected static final String checksumExtension = ".checksum";
 
 	private static Scanner scanner;
 	private static boolean start = false;
@@ -102,7 +104,7 @@ public class SecureChat2 {
 
 	}
 
-	private static void waitForMessage(String inboxDir) {
+	protected static void waitForMessage(String inboxDir) {
 		int numFiles = 0;
 		while(numFiles == 0) {
 			numFiles = new File(inboxDir).listFiles(hiddenFileFilter).length;
@@ -166,7 +168,7 @@ public class SecureChat2 {
 		// send the message
 		messageFilePath = clientInboxDir + messageName;
 		Message confirmMessage = new Message(messageType, "");
-		confirmMessage.writeMessageFile(messageFilePath, options);
+		confirmMessage.writePlainTextMessageFile(messageFilePath);
 	}
 
 	private static void initClient() {
@@ -210,7 +212,7 @@ public class SecureChat2 {
 
 				//send password message
 				Message m = new Message(Message.MESSAGE_TYPE_PASSWORD, password);
-				m.writeMessageFile(messageSendFilePath, options);
+				m.writePlainTextMessageFile(messageSendFilePath);
 
 				//wait for server to respond
 				waitForMessage(clientInboxDir);
@@ -281,7 +283,21 @@ public class SecureChat2 {
 		}
 
 		Message m = new Message(Message.MESSAGE_TYPE_OPTIONS, optionsString);
-		m.writeMessageFile(messageFilePath, options);
+		m.writePlainTextMessageFile(messageFilePath);
+	}
+
+	// Pass in a String message and return a MD5 checksum
+	protected static byte[] getMD5(String message){
+		byte[] hash = null;
+		try {
+			MessageDigest digest = MessageDigest.getInstance("MD5");
+			hash = digest.digest(message.getBytes("UTF-8"));
+		}
+		catch (Exception e){
+			e.printStackTrace();
+		}
+
+		return hash;
 	}
 
 	private static void printUsage(){

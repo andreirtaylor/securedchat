@@ -10,7 +10,7 @@ public class MessageReader extends Thread {
 	private String messagePrompt;
 	private String inboxDir;
 	private boolean[] options;
-	private static final String messageName = "message";
+	
 
 	public static FileFilter hiddenFileFilter = new FileFilter() {
 		public boolean accept(File file) {
@@ -34,35 +34,73 @@ public class MessageReader extends Thread {
 			while(true) {
 
 				// check if new messages exist
-				int numFiles = new File(inboxDir).listFiles(hiddenFileFilter).length;
+				SecureChat2.waitForMessage(inboxDir);
+				
+				String messageFilePath = inboxDir + SecureChat2.messageName;
+				File f = new File(messageFilePath);
 
-				if(numFiles > 0) {
+				if(f.exists()) {
+					boolean validMessage = false;
 
-					// assume only 1 message file exists for now
+					// check if regular message file exists
+					Message m = new Message();
+					m.readMessageFile(messageFilePath, options, false);
+					f.delete();
 
-					// check file exists
-					String messageFilePath = inboxDir + messageName;
-					File f = new File(messageFilePath);
+					if(options[1]) {
+						// wait for checksum file to arrive
+						SecureChat2.waitForMessage(inboxDir);
 
-					if(f.exists()) {
+						String checksumMessageFilePath = messageFilePath + SecureChat2.checksumExtension;
+						f = new File(checksumMessageFilePath);
 
-						Message m = new Message();
-						m.readMessageFile(messageFilePath, options);
-						f.delete();
+						if(f.exists()) {
+							// retrieve the checksum message, always decrypt
+							Message checksumMessage = new Message();
+							checksumMessage.readMessageFile(checksumMessageFilePath, options, true);
+							f.delete();
 
-						erase(messagePrompt.length() + inputBuffer.length());
-						System.out.println("received message: " + m.getContents());
-						System.out.print(messagePrompt);
+							String newMessageHash = new String(SecureChat2.getMD5(m.getContents()), "UTF-8");
+
+							if(checksumMessage.getContents().equals(newMessageHash)) {
+								println("Checksum successful");
+								validMessage = true;
+							}
+
+						}
+						else {
+							println("Checksum was not received. Can not validate message.");
+						}
 					}
-				}
+					else {
+						// always valid if checksum isn't used
+						validMessage = true;
+					}
 
-				// check for new message every 0.5s
-				sleep(500);
+					erase(messagePrompt.length() + inputBuffer.length());
+
+					if(validMessage) {
+						println("received message: " + m.getContents());
+					}
+					else {
+						println("The checksum does not match. Message is invalid.");
+					}
+					
+					System.out.print(messagePrompt);
+				}
 			}
 		}
-		catch(InterruptedException e) {
-			System.out.println("Thread " + getName() + " interrupted.");
+		catch(Exception e) {
+			e.printStackTrace();
 		}
+	}
+
+	/* 
+	 *  Removes the message prompt before printing the message
+	 */
+	public void println(String message) {
+		erase(messagePrompt.length());
+		System.out.println(message);
 	}
 
 	public void erase(int length) {

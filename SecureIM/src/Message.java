@@ -44,15 +44,28 @@ public class Message {
 		this.contents = contents;
 	}
 
-	public void writeMessageFile(String messageFilePath, boolean[] options) {
+	public void writePlainTextMessageFile(String messageFilePath) {
+		// write message type as the first line
+		String messageContent = type + "\n" + contents;
 
+		byte[] fileBytes = messageContent.getBytes();
+
+		try {
+			Files.write(Paths.get(messageFilePath), fileBytes);
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+	public void writeMessageFile(String messageFilePath, boolean[] options, boolean forceEncrypt) {
 		// write message type as the first line
 		String messageContent = type + "\n" + contents;
 
 		byte[] fileBytes = messageContent.getBytes();
 		
 		// encrypt message (apply confidentiality)
-		if(options[0] && type == MESSAGE_TYPE_NORMAL) {
+		if(options[0] || forceEncrypt) {
 			try {
 				System.out.println("encrypting");
 				Cipher aesCipher = Cipher.getInstance("AES");
@@ -63,25 +76,6 @@ public class Message {
 				e.printStackTrace();
 			}
 		}
-
-		// // use checksum (apply integrity)
-		// if(options[1]) {
-		// 	try {
-		// 		byte[] hashMessage = getMD5(messageContent);
-
-		// 		// if you are using confidentiality
-		// 		Cipher aesCipher = Cipher.getInstance("AES");
-		// 		aesCipher.init(Cipher.ENCRYPT_MODE, generateOrGetSecretKey());
-
-		// 		hashMessage = aesCipher.doFinal(hashMessage);
-
-		// 		Files.write(Paths.get(serverIncomming + checkSumFile), hashMessage);
-		// 	}
-		// 	catch(Exception e) {
-		// 		e.printStackTrace();
-		// 	}
-		// }
-		
 
 		try {
 			Files.write(Paths.get(messageFilePath), fileBytes);
@@ -102,7 +96,6 @@ public class Message {
 
 			// remove the 2 first chars that indicated message type
 			contents = messageContent.substring(2);
-
 		}
 		catch(Exception e) {
 			e.printStackTrace();
@@ -113,22 +106,17 @@ public class Message {
 	 * Does encryption and checks checksum
 	 * Should only be used for MESSAGE_TYPE_NORMAL
 	 */
-	public void readMessageFile(String messageFilePath, boolean[] options) {
+	public void readMessageFile(String messageFilePath, boolean[] options, boolean forceDecrypt) {
 
 		try {
 			byte[] fileBytes = Files.readAllBytes(Paths.get(messageFilePath));
 
 			// decrypt
-			if(options[0]) {
+			if(options[0] || forceDecrypt) {
 				System.out.println("decrypting");
 				Cipher aesCipher = Cipher.getInstance("AES");
 				aesCipher.init(Cipher.DECRYPT_MODE, generateOrGetSecretKey());
 				fileBytes = aesCipher.doFinal(fileBytes);
-			}
-
-			// checksum
-			if(options[1]) {
-
 			}
 
 			String messageContent = new String(fileBytes, "UTF-8");
