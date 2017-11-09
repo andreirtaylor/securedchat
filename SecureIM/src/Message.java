@@ -7,6 +7,8 @@ public class Message {
 	public static final int MESSAGE_TYPE_NORMAL = 1; // regular message
 	public static final int MESSAGE_TYPE_CONFIRM_INIT = 2; // initializatioin confirmation message
 
+	public static boolean[] options = new boolean[3];
+
 	private int type;
 	private String contents;
 
@@ -33,7 +35,7 @@ public class Message {
 		this.contents = contents;
 	}
 
-	public void writeMessageFile(String messageFilePath) {
+	public void writeMessageFile(String messageFilePath, options) {
 
 		// write message type as the first line
 		String messageContent = type + "\n" + contents;
@@ -51,7 +53,7 @@ public class Message {
 		}
 	}
 
-	public void readMessageFile(String messageFilePath) {
+	public void readMessageFile(String messageFilePath, options) {
 
 		try {
 			byte[] fileBytes = Files.readAllBytes(Paths.get(messageFilePath));

@@ -9,6 +9,7 @@ public class MessageReader extends Thread {
 	private String inputBuffer;
 	private String messagePrompt;
 	private String inboxDir;
+	private boolean[] options;
 	private static final String messageName = "message";
 
 	public static FileFilter hiddenFileFilter = new FileFilter() {
@@ -20,10 +21,11 @@ public class MessageReader extends Thread {
 		}
 	};
 
-	public MessageReader(String messagePrompt, String inputBuffer, String inboxDir) {
+	public MessageReader(String messagePrompt, String inputBuffer, String inboxDir, boolean[] options) {
 		this.inputBuffer = inputBuffer;
 		this.messagePrompt = messagePrompt;
 		this.inboxDir = inboxDir;
+		this.options = options;
 	}
 	
 	public void run() {
@@ -45,7 +47,7 @@ public class MessageReader extends Thread {
 					if(f.exists()) {
 
 						Message m = new Message();
-						m.readMessageFile(messageFilePath);
+						m.readMessageFile(messageFilePath, options);
 						f.delete();
 
 						erase(messagePrompt.length() + inputBuffer.length());

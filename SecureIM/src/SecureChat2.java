@@ -62,11 +62,11 @@ public class SecureChat2 {
 		}
 
 		if(start) {
-			MessageReader reader = new MessageReader(messagePrompt, inputBuffer, readInboxDir);
+			MessageReader reader = new MessageReader(messagePrompt, inputBuffer, readInboxDir, options);
 			reader.setName("reader");
 			reader.start();
 
-			MessageWriter writer = new MessageWriter(messagePrompt, inputBuffer, writeInboxDir);
+			MessageWriter writer = new MessageWriter(messagePrompt, inputBuffer, writeInboxDir, options);
 			writer.setName("writer");
 			writer.start();
 		}
@@ -92,6 +92,7 @@ public class SecureChat2 {
 		if(f.exists()) {
 			Message m = new Message();
 			m.readMessageFile(messageFilePath);
+			m
 			if(m.getType() == Message.MESSAGE_TYPE_INIT) {
 				f.delete();
 
@@ -124,14 +125,19 @@ public class SecureChat2 {
 			}
 		}
 
+		// if authentication is used check password
+		if(options[2]) {
+			
+		}
+
 	}
 
 	private static void initClient() {
-		// check password
-		// ...
-
 		// select CIA options
 		getSecurityOptions();
+
+		// check password
+		// ...
 
 		// attempt to create establish connection (send CIA options)
 		sendOptionsMessage(serverInboxDir + messageName);
@@ -158,7 +164,50 @@ public class SecureChat2 {
 				start = false;
 			}
 		}
+
+		// if authentication is used check password
+		if(options[2]) {
+
+			boolean success = false;
+
+			while(!success) {
+				System.out.println("Enter password:");
+				String password = scanner.nextLine();
+
+				//send password message
+				Message m = new Message(Message.MESSAGE_TYPE_INIT, password);
+				m.writeMessageFile(messageFilePath);
+
+				//wait for server to respond
+				int numFiles = 0;
+				while(numFiles == 0) {
+					numFiles = new File(clientInboxDir).listFiles(hiddenFileFilter).length;
+				}
+
+				// check file exists and that it is the correct message type
+				String messageFilePath = clientInboxDir + messageName;
+				File f = new File(messageFilePath);
+
+				if(f.exists()) {
+					Message m = new Message();
+					m.readMessageFile(messageFilePath);
+					f.delete();
+					if(m.getType() == Message.MESSAGE_TYPE_CONFIRM_INIT) {
+						success = true;
+						System.out.println("Password correct.");
+					}
+					else {
+						success = false;
+						start = false;
+					}
+				}
+			}
+
+		}
 	}
+
+
+
 
 	private static void getSecurityOptions() {
 		System.out.println("Enter desired security options (CIA):");

@@ -11,11 +11,13 @@ public class MessageWriter extends Thread {
 	private String messagePrompt;
 	private static final String messageFileName = "message";
 	private String messageFilePath;
+	private boolean[] options;
 
-	MessageWriter(String messagePrompt, String inputBuffer, String inboxDir) {
+	MessageWriter(String messagePrompt, String inputBuffer, String inboxDir, boolean[] options) {
 		this.inputBuffer = inputBuffer;
 		this.messagePrompt = messagePrompt;
 		this.messageFilePath = inboxDir + messageFileName;
+		this.options = options;
 		scanner = new Scanner(System.in);
 	}
 
@@ -25,7 +27,7 @@ public class MessageWriter extends Thread {
 			String input = scanner.nextLine();
 
 			Message m = new Message(Message.MESSAGE_TYPE_NORMAL, input);
-			m.writeMessageFile(messageFilePath);
+			m.writeMessageFile(messageFilePath, options);
 		}
 	}
 }
