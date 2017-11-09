@@ -17,11 +17,6 @@ public class MessageWriter extends Thread {
 		this.messagePrompt = messagePrompt;
 		this.messageFilePath = inboxDir + messageFileName;
 		scanner = new Scanner(System.in);
-
-		File inbox = new File(inboxDir);
-		if(!inbox.exists()) {
-			inbox.mkdir();
-		}
 	}
 
 	public void run() {

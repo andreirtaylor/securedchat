@@ -30,6 +30,16 @@ public class SecureChat2 {
 
 		scanner = new Scanner(System.in);
 
+		// create client and server inboxes
+		File inbox = new File(serverInboxDir);
+		if(!inbox.exists()) {
+			inbox.mkdir();
+		}
+		inbox = new File(clientInboxDir);
+		if(!inbox.exists()) {
+			inbox.mkdir();
+		}
+
 		if(args.length != 1){
 			printUsage();
 			return;

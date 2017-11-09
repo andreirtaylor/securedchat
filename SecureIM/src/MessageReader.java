@@ -24,11 +24,6 @@ public class MessageReader extends Thread {
 		this.inputBuffer = inputBuffer;
 		this.messagePrompt = messagePrompt;
 		this.inboxDir = inboxDir;
-
-		File inbox = new File(inboxDir);
-		if(!inbox.exists()) {
-			inbox.mkdir();
-		}
 	}
 	
 	public void run() {
