@@ -72,14 +72,14 @@ java SecureChat –server
 After starting up, the server will ask for the desired configuration of security options (None, Confidential, Integrity, Authentication). 
 After waiting for client, enter the message. In this example the message is “Hello World!”
 
-![](assets/Client.png)
+![](assets/server.png)
 
 On client side, invoke: 
 java SecureChat –client
 After starting up, the client will ask for the desired configuration like above. Enter the configuration
 After establishing the connection, the client will receive a message from server and attempt to decrypt it. In this example, it successfully decrypted String “Hello World!”
 
-![](assets/server.png)
+![](assets/Client.png)
 
 The client must be commence the connection and once the server sees the connection a bidirectional channel is created between the client and the server.
 
