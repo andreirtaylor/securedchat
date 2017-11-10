@@ -112,33 +112,57 @@ On failure of reading the message a error is displayed.
 
 ##Description of Methods
 
-###SecureChat.initServer()
+SecureChat.initServer()
+
 SecureChat.authorizeServerPassword()
+
 SecureChat.generateStrongPasswordHash(String)
+
 SecureChat.getSalt()
+
 SecureChat.toHex(byte[])
+
 SecureChat.authenticateClientMessage(String, File)
+
 SecureChat.initClient()
+
 SecureChat.getSecurityOptions()
+
 SecureChat.setOptions(String, boolean[])
+
 SecureChat.sendOptionsMessage(String)
+
 SecureChat.waitForMessage(String)
+
 SecureChat.getHash(String)
+
 SecureChat.printUsage()
 
+
 MessageReader.run()
+
 MessageReader.println(String)
+
 MessageReader.erase(int)
 
 MessageWriter.run()
 
 Message.Message(int, String)
+
 Message.getType()
+
 Message.setType(Integer)
+
 Message.getContents()
+
 Message.setContents(String)
+
 Message.writePlainTextMessageFile(String)
+
 Message.writeMessageFile(String, boolean[], boolean)
+
 Message.readPlainTextMessageFile(String)
+
 Message.readMessageFile(String, boolean[], boolean)
+
 Message.generateOrGetSecretKey()
