@@ -67,6 +67,17 @@ java SecureChat --client
 
 The chat application works by sending messages from client to server and vice versa.
 
+On server side, invoke:
+java SecureChat –server
+After starting up, the server will ask for the desired configuration of security options (None, Confidential, Integrity, Authentication). 
+After waiting for client, enter the message. In this example the message is “Hello World!”
+
+On client side, invoke: 
+java SecureChat –client
+After starting up, the client will ask for the desired configuration like above. Enter the configuration
+After establishing the connection, the client will receive a message from server and attempt to decrypt it. In this example, it successfully decrypted String “Hello World!”
+
+
 ![](assets/README-d5273.png)
 
 The client must be commence the connection and once the server sees the connection a bidirectional channel is created between the client and the server.
