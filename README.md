@@ -46,8 +46,8 @@ These options are independent and must be agreed upon by both the client and the
 
 Note that due to the independent nature of the above options there is up to 7 different configurations of the security options
 
+```text
 None: Message is sent in plain text
-
 C: Message is encrypted
 I: Checksum is sent with message
 A: Password is sent with message (Unencrypted)
@@ -55,6 +55,7 @@ CI: Message is sent encrypted with Checksum
 CA: Message is sent encrypted, password is sent encrypted
 IA: Checksum is sent with, Unencrypted message and password
 CIA: Checksum is sent with encrypted message and password
+```
 
 
 ### How messages are sent
