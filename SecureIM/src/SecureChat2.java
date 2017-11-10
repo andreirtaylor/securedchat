@@ -165,7 +165,6 @@ public class SecureChat2 {
 
 		// send the message
 		messageFilePath = clientInboxDir + messageName;
-		System.out.println("SENDING MESSAGE TYPE: " + messageType);
 		Message confirmMessage = new Message(messageType, "This is a confirmation message");
 		confirmMessage.writePlainTextMessageFile(messageFilePath);
 	}
@@ -191,7 +190,7 @@ public class SecureChat2 {
 			Message m = new Message();
 			m.readPlainTextMessageFile(messageReceiveFilePath);
 			f.delete();
-			
+
 			if(m.getType() == Message.MESSAGE_TYPE_CONFIRM) {
 				System.out.println("Connection established successfully.");
 			}
@@ -299,7 +298,9 @@ public class SecureChat2 {
 		}
 	}
 
-	// Pass in a String message and return a MD5 checksum
+	/*
+	 *  Hash message using SHA-1
+	 */
 	protected static byte[] getHash(String message){
 		byte[] hash = null;
 		try {
