@@ -149,14 +149,12 @@ The main class of the application that performs all client and server initializa
 
 
 
-###Message Class
+### Message Class
 
 Class used for handling messages. Stores message type and contents. Provides functions for reading and writing messages
 
 
-
-####Methods
-
+#### Methods
 
 
 - ```void writePlainTextMessageFile(String messageFilePath)``` Write a plain text message to a file. No encryption done here.
@@ -170,25 +168,23 @@ Class used for handling messages. Stores message type and contents. Provides fun
 - ```static SecretKey generateOrGetSecretKey()``` Gets a secret key stored in a file or generates a new secret key if the file does not exist.
 
 
-
-###MessageWriter Class
-
+### MessageWriter Class
 
 Thread class to get input from std in and store it in a message file (sending it to the server)
 
-####Methods
+#### Methods
 
 
 - ```void run()``` Runs an infinite loop that checks for text input then writes messages to a file
 
 
-###MessageReader Class
+### MessageReader Class
 
 
 Class to reads messages from message files and writes contents to std out
 
 
-####Methods
+#### Methods
 
 
 - ```void run()``` Runs an inifinite loop that checks for new messages and processes them on arrival. Performs checksum authentication.
