@@ -16,6 +16,17 @@ import java.security.spec.InvalidKeySpecException;
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
 
+
+/*
+ *  Main class for starting SecureChat application
+ * 
+ *  Can be started with --server or --client command line option to run
+ *  the server or the client
+ *  
+ *  Includes client and server initialization methods and starts the
+ *  MessageReader and MessageWriter Threads
+ *
+ */
 public class SecureChat2 {
 
 	static Console console = System.console();
@@ -96,6 +107,10 @@ public class SecureChat2 {
 
 	}
 
+	/*
+	 *  Performs all server initialization steps including comparing selected
+	 *	security options to client security options and password authentication
+	 */
 	private static void initServer() {
 		// set CIA options
 		getSecurityOptions();
@@ -125,38 +140,42 @@ public class SecureChat2 {
 
 	}
 
-	private static void authorizeServerPassword() {//compare user input to pbkdf2 hashed password
+	/*
+	 *  Compare user input to pbkdf2 hashed password
+	 */
+	private static void authorizeServerPassword() {
 
-		while(!serverAuthenticated){
+		while(!serverAuthenticated) {
 			File f = new File(passwordDir + serverPass);
-			if(!(f.exists() && !f.isDirectory())) {//if no server password file exists, create one 
+			if(!(f.exists() && !f.isDirectory())) {
+				//if no server password file exists, create one 
+				
 				// create password
-
 				String newPassword;
 				try {
-
-
-					newPassword =
-							generateStrongPasswordHash(new String(console.readPassword("Please enter a password: ")));
+					newPassword = generateStrongPasswordHash(new String(console.readPassword("Please enter a password: ")));
 
 					Files.write(Paths.get(passwordDir + serverPass), newPassword.getBytes());
 					serverAuthenticated = true;
 
 
-				} catch (Exception e) {
+				}
+				catch (Exception e) {
 					e.printStackTrace();
 				}
 
-			}else{
+			}
+			else {
 
-				try{
+				try {
 					byte[] fileBytes = Files.readAllBytes(Paths.get(passwordDir + serverPass));
-					String password =
-							generateStrongPasswordHash(new String(console.readPassword("Please enter a password: ")));
-					if(Arrays.equals(fileBytes, password.getBytes())){
+					String password = generateStrongPasswordHash(new String(console.readPassword("Please enter a password: ")));
+
+					if(Arrays.equals(fileBytes, password.getBytes())) {
 						serverAuthenticated = true;
 					}
-				}catch(Exception e){
+				}
+				catch(Exception e) {
 					e.printStackTrace();
 				}
 			}
@@ -175,41 +194,43 @@ public class SecureChat2 {
 		return iterations + ":" + toHex(salt) + ":" + toHex(hash);
 	}
 
-	private static byte[] getSalt() throws NoSuchAlgorithmException //creates a salt
-	{
+	private static byte[] getSalt() throws NoSuchAlgorithmException {
 		byte[] salt = new byte[16];
 		File f = new File(passwordDir + saltFileName);
-		if((f.exists() && !f.isDirectory())){
+		if((f.exists() && !f.isDirectory())) {
 			try {
 				salt = Files.readAllBytes(Paths.get(passwordDir + saltFileName));
-			} catch (IOException e) {
+			}
+			catch (IOException e) {
 				e.printStackTrace();
 			}
 			return salt;
 
-		}else{//generate new salt and save
+		}
+		else {//generate new salt and save
 			SecureRandom sr = SecureRandom.getInstance("SHA1PRNG");
 			sr.nextBytes(salt);
-			try{
+			try {
 				FileOutputStream fos = new FileOutputStream(passwordDir + saltFileName);
 				fos.write(salt);
 				fos.close();
-			}catch(Exception e){
+			}
+			catch(Exception e){
 				e.printStackTrace();
 			}
 			return salt;
 		}
 	}
 
-	private static String toHex(byte[] array) throws NoSuchAlgorithmException
-	{
+	private static String toHex(byte[] array) throws NoSuchAlgorithmException {
 		BigInteger bi = new BigInteger(1, array);
 		String hex = bi.toString(16);
 		int paddingLength = (array.length * 2) - hex.length();
-		if(paddingLength > 0)
-		{
+
+		if(paddingLength > 0) {
 			return String.format("%0"  +paddingLength + "d", 0) + hex;
-		}else{
+		}
+		else{
 			return hex;
 		}
 	}
@@ -280,13 +301,6 @@ public class SecureChat2 {
 						e.printStackTrace();
 					}
 				}
-			
-			
-//			if(m.getContents().equals("clientpw")) {
-//				System.out.println("correct password.");
-//				messageAuthenticated = true;
-//				clientPasswordNeeded = false;
-//			}
 
 		}
 		else {
@@ -308,6 +322,10 @@ public class SecureChat2 {
 		confirmMessage.writePlainTextMessageFile(messageFilePath);
 	}
 
+	/*
+	 *  Performs all client initialization steps including sending selected
+	 *	options to server and password authentication
+	 */
 	private static void initClient() {
 		String messageSendFilePath = serverInboxDir + messageName;
 		String messageReceiveFilePath = clientInboxDir + messageName;
@@ -381,6 +399,9 @@ public class SecureChat2 {
 		}
 	}
 
+	/*
+	 * Sets options array values from stdin input txt
+	 */
 	private static void getSecurityOptions() {
 		System.out.println("Enter desired security options (CIA):");
 		String input = scanner.nextLine();
@@ -398,6 +419,9 @@ public class SecureChat2 {
 		}
 	}
 
+	/*
+	 *  Sets optionsArr from a string of options in optionsString
+	 */
 	private static void setOptions(String optionsString, boolean[] optionsArr) {
 		for(int i = 0; i < optionsArr.length; i++) {
 			if(optionsString.charAt(i) == '1') {
@@ -406,6 +430,9 @@ public class SecureChat2 {
 		}
 	}
 
+	/*
+	 * Sends a message with selected options to messageFilePath
+	 */
 	private static void sendOptionsMessage(String messageFilePath) {
 		String optionsString = "";
 		for(int i = 0; i < options.length; i++){
@@ -421,6 +448,11 @@ public class SecureChat2 {
 		m.writeMessageFile(messageFilePath, options, true);
 	}
 
+	/*
+	 * Wait for a message to be received in inboxDir
+	 * Waits for a short ammount of time to allow file to be successfully 
+	 *	written before it is read
+	 */
 	protected static void waitForMessage(String inboxDir) {
 		int numFiles = 0;
 		while(numFiles == 0) {
