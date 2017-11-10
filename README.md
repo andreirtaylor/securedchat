@@ -5,6 +5,40 @@ The server and client run in different processes. They need to be run in differe
 command line terminals. They use AES encryption to perform authentication although
 this is easliy changed;
 
+## Folder Permission
+In order for the app to function, there needs to be some modification to the permission. 
+
+Both the client and the server needs to have permission of the folder. In order to achieve this, run this command:
+
+```bash
+sudo chown -R $USER:$USER FOLDER_NAME
+```
+
+Both client and server needs to be added to a new group and the group needs to be granted permission for the folder.
+To create a new group and add the client/server to the group, run:
+
+```bash
+sudo groupadd CLIENT_GROUP
+sudo adduser CLIENT CLIENT_GROUP
+```
+
+```bash
+sudo groupadd SERVER_GROUP
+sudo adduser SERVER SERVER_GROUP
+```
+
+Last thing to add is the permission of the new group to access the folder.
+To add the folder to be part of the new group, run:
+
+```bash
+chgrp groupA ./folderA
+```
+
+To grant the group permission to the folder, run:
+
+```bash
+chmod g+rwx  ./folderA
+```
 ## How to run
 
 Compile the client/server in the src folder
