@@ -1,9 +1,6 @@
 # securedchat
 
-Created by, 
-V00807046 - Andrei Taylor,  
-V00849182 - Duc Nguyen, 
-V00809321 - Justyn Houle, 
+Created by, V00807046 - Andrei Taylor, V00849182 - Duc Nguyen, V00809321 - Justyn Houle, 
 Sam Taylor 
 
 
