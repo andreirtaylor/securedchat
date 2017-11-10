@@ -107,3 +107,38 @@ On failure of reading the message a error is displayed.
 - the program is tested to currently allow one of either the client or server to send a message at a time
 - manual setup of the folder permissions must be set up on each machine that this program is run on
 - we are currently only supporting Ubuntu 17.10.
+
+
+
+##Description of Methods
+
+###SecureChat.initServer()
+SecureChat.authorizeServerPassword()
+SecureChat.generateStrongPasswordHash(String)
+SecureChat.getSalt()
+SecureChat.toHex(byte[])
+SecureChat.authenticateClientMessage(String, File)
+SecureChat.initClient()
+SecureChat.getSecurityOptions()
+SecureChat.setOptions(String, boolean[])
+SecureChat.sendOptionsMessage(String)
+SecureChat.waitForMessage(String)
+SecureChat.getHash(String)
+SecureChat.printUsage()
+
+MessageReader.run()
+MessageReader.println(String)
+MessageReader.erase(int)
+
+MessageWriter.run()
+
+Message.Message(int, String)
+Message.getType()
+Message.setType(Integer)
+Message.getContents()
+Message.setContents(String)
+Message.writePlainTextMessageFile(String)
+Message.writeMessageFile(String, boolean[], boolean)
+Message.readPlainTextMessageFile(String)
+Message.readMessageFile(String, boolean[], boolean)
+Message.generateOrGetSecretKey()

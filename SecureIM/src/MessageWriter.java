@@ -15,7 +15,7 @@ public class MessageWriter extends Thread {
 	MessageWriter(String messagePrompt, String inputBuffer, String inboxDir, boolean[] options) {
 		this.inputBuffer = inputBuffer;
 		this.messagePrompt = messagePrompt;
-		this.messageFilePath = inboxDir + SecureChat2.messageName;
+		this.messageFilePath = inboxDir + SecureChat.messageName;
 		this.options = options;
 		scanner = new Scanner(System.in);
 	}
@@ -31,8 +31,8 @@ public class MessageWriter extends Thread {
 			// send checksum (apply integrity)
 			if(options[1]) {
 				try {
-					String hashMessagePath = messageFilePath + SecureChat2.checksumExtension;
-					String hashMessage = new String(SecureChat2.getHash(input), "UTF-8");
+					String hashMessagePath = messageFilePath + SecureChat.checksumExtension;
+					String hashMessage = new String(SecureChat.getHash(input), "UTF-8");
 
 					// always force encrypt the checksum
 					m = new Message(Message.MESSAGE_TYPE_NORMAL, hashMessage);
