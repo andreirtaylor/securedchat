@@ -8,6 +8,10 @@ import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 
+
+/*
+ *  Class used for handling messages, storing message type and contents
+ */
 public class Message {
 
 	public static final int MESSAGE_TYPE_OPTIONS = 0; // initialization message
@@ -18,7 +22,7 @@ public class Message {
 
 	public static boolean[] options = new boolean[3];
 
-	private int type;
+	private Integer type;
 	private String contents;
 
 	public Message() {}
@@ -28,11 +32,11 @@ public class Message {
 		this.contents = contents;
 	}
 
-	public int getType() {
+	public Integer getType() {
 		return type;
 	}
 
-	public void setType(int type) {
+	public void setType(Integer type) {
 		this.type = type;
 	}
 
@@ -44,7 +48,17 @@ public class Message {
 		this.contents = contents;
 	}
 
+	/*
+	 *  Write a plain text message to a file
+	 *  No encryption done here
+	 */
 	public void writePlainTextMessageFile(String messageFilePath) {
+
+		if(type == null) {
+			System.out.println("Message type not set. Can not send message.");
+			return;
+		}
+
 		// write message type as the first line
 		String messageContent = type + "\n" + contents;
 
@@ -58,7 +72,17 @@ public class Message {
 		}
 	}
 
+	/*
+	 *  Write a message to a file with encryption if it is specified in options.
+	 *  Encryption can be forced with the forceEncrypt parameter (used for checksum files)
+	 */
 	public void writeMessageFile(String messageFilePath, boolean[] options, boolean forceEncrypt) {
+
+		if(type == null) {
+			System.out.println("Message type not set. Can not send message.");
+			return;
+		}
+
 		// write message type as the first line
 		String messageContent = type + "\n" + contents;
 
@@ -85,12 +109,16 @@ public class Message {
 		}
 	}
 
+	/*
+	 *  Read a plain text message to a file
+	 *  No encryption done here
+	 */
 	public void readPlainTextMessageFile(String messageFilePath) {
 		try {
 			byte[] fileBytes = Files.readAllBytes(Paths.get(messageFilePath));
 
 			String messageContent = new String(fileBytes, "UTF-8");
-
+			
 			String t = messageContent.substring(0, 1);
 			type = Integer.parseInt(t);
 
@@ -103,8 +131,9 @@ public class Message {
 	}
 
 	/*
-	 * Does encryption and checks checksum
-	 * Should only be used for MESSAGE_TYPE_NORMAL
+	 *  Write a message to a file with encryption if it is specified in options.
+	 *  Encryption can be forced with the forceEncrypt parameter (used for checksum 
+	 *  files and initialization messages)
 	 */
 	public void readMessageFile(String messageFilePath, boolean[] options, boolean forceDecrypt) {
 
@@ -134,6 +163,10 @@ public class Message {
 
 	}
 
+	/*
+	 *  Gets a secret key stored in a file or generates a new
+	 *  secret key if the file does not exist
+	 */
 	private static SecretKey generateOrGetSecretKey(){
 		try {
 			SecretKey secKey;

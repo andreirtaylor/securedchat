@@ -37,6 +37,7 @@ public class MessageReader extends Thread {
 					m.readMessageFile(messageFilePath, options, false);
 					f.delete();
 
+					// integrity security option
 					if(options[1]) {
 						// wait for checksum file to arrive
 						SecureChat2.waitForMessage(inboxDir);
@@ -90,6 +91,9 @@ public class MessageReader extends Thread {
 		System.out.println(message);
 	}
 
+	/*
+	 * Removes text from command line input
+	 */
 	public void erase(int length) {
 		for(int i = 0; i < length; i++) {
 			System.out.print("\b");

@@ -107,18 +107,20 @@ public class SecureChat2 {
 	private static void authenticateClientMessage(String messageFilePath, File f) {
 		boolean messageAuthenticated = false;
 
+		// force encryption on initialization methods
 		Message m = new Message();
-		m.readPlainTextMessageFile(messageFilePath);
+		m.readMessageFile(messageFilePath, options, true);
 
 		f.delete();
 
-		if(m.getType() == Message.MESSAGE_TYPE_OPTIONS) {//if the client sent a request (not an IM message)
+		if(m.getType() == Message.MESSAGE_TYPE_OPTIONS) {
+			//if the client sent a request (not an IM message)
 
 			boolean[] clientOptions = new boolean[3];
 			setOptions(m.getContents(), clientOptions);
 
 			boolean match = true;
-			
+
 			// check if CIA options match
 			for(int i = 0; i < options.length; i++) {
 				if(options[i] != clientOptions[i]) {
@@ -137,7 +139,9 @@ public class SecureChat2 {
 			}
 
 		}
-		else if(m.getType() == Message.MESSAGE_TYPE_PASSWORD) {//if client sent a password
+		else if(m.getType() == Message.MESSAGE_TYPE_PASSWORD) {
+			//if client sent a password
+
 			//compare to pw table
 			if(m.getContents().equals("clientpw")) {
 				System.out.println("correct password.");
@@ -161,7 +165,8 @@ public class SecureChat2 {
 
 		// send the message
 		messageFilePath = clientInboxDir + messageName;
-		Message confirmMessage = new Message(messageType, "");
+		System.out.println("SENDING MESSAGE TYPE: " + messageType);
+		Message confirmMessage = new Message(messageType, "This is a confirmation message");
 		confirmMessage.writePlainTextMessageFile(messageFilePath);
 	}
 
@@ -186,6 +191,7 @@ public class SecureChat2 {
 			Message m = new Message();
 			m.readPlainTextMessageFile(messageReceiveFilePath);
 			f.delete();
+			
 			if(m.getType() == Message.MESSAGE_TYPE_CONFIRM) {
 				System.out.println("Connection established successfully.");
 			}
@@ -203,10 +209,9 @@ public class SecureChat2 {
 				System.out.println("Enter password:");
 				String password = scanner.nextLine();
 	
-
 				//send password message
 				Message m = new Message(Message.MESSAGE_TYPE_PASSWORD, password);
-				m.writePlainTextMessageFile(messageSendFilePath);
+				m.writeMessageFile(messageSendFilePath, options, false);
 
 				//wait for server to respond
 				waitForMessage(clientInboxDir);
@@ -276,13 +281,21 @@ public class SecureChat2 {
 		}
 
 		Message m = new Message(Message.MESSAGE_TYPE_OPTIONS, optionsString);
-		m.writePlainTextMessageFile(messageFilePath);
+		m.writeMessageFile(messageFilePath, options, true);
 	}
 
 	protected static void waitForMessage(String inboxDir) {
 		int numFiles = 0;
 		while(numFiles == 0) {
 			numFiles = new File(inboxDir).listFiles(hiddenFileFilter).length;
+		}
+
+		try {
+			// wait to ensure file is completely written
+			MessageWriter.sleep(500);
+		}
+		catch(Exception e) {
+			e.printStackTrace();
 		}
 	}
 
