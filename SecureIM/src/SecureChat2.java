@@ -104,13 +104,6 @@ public class SecureChat2 {
 
 	}
 
-	protected static void waitForMessage(String inboxDir) {
-		int numFiles = 0;
-		while(numFiles == 0) {
-			numFiles = new File(inboxDir).listFiles(hiddenFileFilter).length;
-		}
-	}
-
 	private static void authenticateClientMessage(String messageFilePath, File f) {
 		boolean messageAuthenticated = false;
 
@@ -125,6 +118,7 @@ public class SecureChat2 {
 			setOptions(m.getContents(), clientOptions);
 
 			boolean match = true;
+			
 			// check if CIA options match
 			for(int i = 0; i < options.length; i++) {
 				if(options[i] != clientOptions[i]) {
@@ -271,7 +265,6 @@ public class SecureChat2 {
 	}
 
 	private static void sendOptionsMessage(String messageFilePath) {
-
 		String optionsString = "";
 		for(int i = 0; i < options.length; i++){
 			if(options[i]){
@@ -284,6 +277,13 @@ public class SecureChat2 {
 
 		Message m = new Message(Message.MESSAGE_TYPE_OPTIONS, optionsString);
 		m.writePlainTextMessageFile(messageFilePath);
+	}
+
+	protected static void waitForMessage(String inboxDir) {
+		int numFiles = 0;
+		while(numFiles == 0) {
+			numFiles = new File(inboxDir).listFiles(hiddenFileFilter).length;
+		}
 	}
 
 	// Pass in a String message and return a MD5 checksum

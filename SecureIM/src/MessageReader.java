@@ -10,16 +10,6 @@ public class MessageReader extends Thread {
 	private String messagePrompt;
 	private String inboxDir;
 	private boolean[] options;
-	
-
-	public static FileFilter hiddenFileFilter = new FileFilter() {
-		public boolean accept(File file) {
-			if(file.isHidden()) {
-				return false;
-			}
-			return true;
-		}
-	};
 
 	public MessageReader(String messagePrompt, String inputBuffer, String inboxDir, boolean[] options) {
 		this.inputBuffer = inputBuffer;
@@ -29,20 +19,20 @@ public class MessageReader extends Thread {
 	}
 	
 	public void run() {
+		String messageFilePath = inboxDir + SecureChat2.messageName;
+		String checksumMessageFilePath = messageFilePath + SecureChat2.checksumExtension;
 
 		try {
 			while(true) {
 
-				// check if new messages exist
 				SecureChat2.waitForMessage(inboxDir);
 				
-				String messageFilePath = inboxDir + SecureChat2.messageName;
 				File f = new File(messageFilePath);
 
 				if(f.exists()) {
 					boolean validMessage = false;
 
-					// check if regular message file exists
+					// read message and delete file
 					Message m = new Message();
 					m.readMessageFile(messageFilePath, options, false);
 					f.delete();
@@ -50,8 +40,7 @@ public class MessageReader extends Thread {
 					if(options[1]) {
 						// wait for checksum file to arrive
 						SecureChat2.waitForMessage(inboxDir);
-
-						String checksumMessageFilePath = messageFilePath + SecureChat2.checksumExtension;
+						
 						f = new File(checksumMessageFilePath);
 
 						if(f.exists()) {
