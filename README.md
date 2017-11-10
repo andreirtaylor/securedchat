@@ -127,9 +127,9 @@ The main class of the application that performs all client and server initializa
 - ```void authorizeServerPassword()``` Compare user input to pbkdf2 hashed password.
 
 
-- ```String generateStrongPasswordHash(String password)```:
+- ```String generateStrongPasswordHash(String password)``` Generates a password hash using PBKDF2 with HMAC-SHA1 encoding.
 
-- ```byte[] getSalt()```
+- ```byte[] getSalt()``` Generates a new salt and stores it to a file.
 
 - ```void authenticateClientMessage(String messageFilePath, File f)``` Authenticates client options and passwords messages. Sends the corresponding confirmation or error message response.
 
@@ -143,15 +143,15 @@ The main class of the application that performs all client and server initializa
 
 - ```void waitForMessage(String inboxDir)``` Wait for a message to be received in inboxDir. Waits for a short ammount of time to allow file to be successfully written before it is read.
 
-- ```byte[] getHash(String message)``` Hash string message using SHA-1
+- ```byte[] getHash(String message)``` Hash string message using SHA-1.
 
-- ```void printUsage()``` Prints a help message for how to run the program
+- ```void printUsage()``` Prints a help message for how to run the program.
 
 
 
 ### Message Class
 
-Class used for handling messages. Stores message type and contents. Provides functions for reading and writing messages
+Class used for handling messages. Stores message type and contents. Provides functions for reading and writing messages.
 
 
 #### Methods
@@ -170,18 +170,18 @@ Class used for handling messages. Stores message type and contents. Provides fun
 
 ### MessageWriter Class
 
-Thread class to get input from std in and store it in a message file (sending it to the server)
+Thread class to get input from std in and store it in a message file (sending it to the server).
 
 #### Methods
 
 
-- ```void run()``` Runs an infinite loop that checks for text input then writes messages to a file
+- ```void run()``` Runs an infinite loop that checks for text input then writes messages to a file.
 
 
 ### MessageReader Class
 
 
-Class to reads messages from message files and writes contents to std out
+Thread class to read messages from message files and writes contents to std out.
 
 
 #### Methods
