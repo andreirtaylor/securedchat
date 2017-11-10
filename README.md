@@ -77,7 +77,7 @@ After waiting for client, enter the message. In this example the message is “H
 On client side, invoke: 
 java SecureChat –client
 After starting up, the client will ask for the desired configuration like above. Enter the configuration
-After establishing the connection, the client will receive a message from server and attempt to decrypt it. In this example, it successfully decrypted String “Hello World!”
+After establishing the connection, the client will receive a message from the server and attempts to decrypt it. In this example, it successfully decrypted String “Hello World!”
 
 ![](assets/Client.png)
 
