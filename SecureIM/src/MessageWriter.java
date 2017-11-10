@@ -2,7 +2,7 @@ import java.util.Scanner;
 import java.io.File;
 
 /*
- *  Gets input from std in and stores it in a message file
+ *  Class to get input from std in and store it in a message file (sending it to the server)
  */
 public class MessageWriter extends Thread {
 	

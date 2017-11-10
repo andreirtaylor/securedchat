@@ -235,6 +235,10 @@ public class SecureChat2 {
 		}
 	}
 
+	/*
+	 * Authenticates client options and passwords messages
+	 * Sends the corresponding confirmation or error message response
+	 */
 	private static void authenticateClientMessage(String messageFilePath, File f) {
 		boolean messageAuthenticated = false;
 
@@ -484,6 +488,9 @@ public class SecureChat2 {
 		return hash;
 	}
 
+	/*
+	 * Prints a help message for how to run the program
+	 */
 	private static void printUsage(){
 		System.out.println("Please use command line arguments to specify if this is a client or a server");
 		System.out.println("run     java SecureChat --server   to create a server");
