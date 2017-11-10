@@ -3,7 +3,7 @@
 Created by, V00807046 - Andrei Taylor, V00849182 - Duc Nguyen, V00809321 - Justyn Houle, V00811400 - Sam Taylor 
 
 
-Toy project to do do secure local messaging.
+Toy project to do secure local messaging.
 
 The server and client run in different processes. They need to be run in different
 command line terminals. They use AES encryption to perform authentication although
