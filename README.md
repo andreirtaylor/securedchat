@@ -81,7 +81,7 @@ After establishing the connection, the client will receive a message from server
 
 ![](assets/Client.png)
 
-The client must be commence the connection and once the server sees the connection a bidirectional channel is created between the client and the server.
+The client must initiate the connection and once the server sees the connection a bidirectional channel is created between the client and the server.
 
 
 ### Security options
