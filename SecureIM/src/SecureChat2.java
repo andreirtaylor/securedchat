@@ -1,18 +1,38 @@
+import java.util.Arrays;
 import java.util.Scanner;
+import java.io.Console;
 import java.io.File;
 import java.io.FileFilter;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.math.BigInteger;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
+import java.security.spec.InvalidKeySpecException;
+
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.PBEKeySpec;
 
 public class SecureChat2 {
 
+	static Console console = System.console();
+
 	private static final String serverInboxDir = "serverInbox/";
 	private static final String clientInboxDir = "clientInbox/";
+	private static final String passwordDir = "passwords/";
+	private static final String serverPass = "serverpw";
+	private static final String clientPass = "clientpw";
 	protected static final String messageName = "message";
+	protected static final String saltFileName = "salt";
 	protected static final String checksumExtension = ".checksum";
 
 	private static Scanner scanner;
 	private static boolean start = false;
-	private static boolean passwordNeeded = false;
+	private static boolean clientPasswordNeeded = false;
+	private static boolean serverAuthenticated = false;
 	private static boolean[] options = new boolean[3];
 
 	public static FileFilter hiddenFileFilter = new FileFilter() {
@@ -23,7 +43,7 @@ public class SecureChat2 {
 			return true;
 		}
 	};
-	
+
 	public static void main(String[] args) {
 
 		String messagePrompt = "Enter message: ";
@@ -92,9 +112,10 @@ public class SecureChat2 {
 		if(f.exists()) {
 			authenticateClientMessage(messageFilePath, f);
 		}
-		
+
 		// if authentication is used check password
-		while(passwordNeeded) {
+		while(clientPasswordNeeded) {
+			authorizeServerPassword();
 			waitForMessage(serverInboxDir);
 			f = new File(messageFilePath);
 			if(f.exists()) {
@@ -102,6 +123,95 @@ public class SecureChat2 {
 			}
 		}
 
+	}
+
+	private static void authorizeServerPassword() {//compare user input to pbkdf2 hashed password
+
+		while(!serverAuthenticated){
+			File f = new File(passwordDir + serverPass);
+			if(!(f.exists() && !f.isDirectory())) {//if no server password file exists, create one 
+				// create password
+
+				String newPassword;
+				try {
+
+
+					newPassword =
+							generateStrongPasswordHash(new String(console.readPassword("Please enter a password: ")));
+
+					Files.write(Paths.get(passwordDir + serverPass), newPassword.getBytes());
+					serverAuthenticated = true;
+
+
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+
+			}else{
+
+				try{
+					byte[] fileBytes = Files.readAllBytes(Paths.get(passwordDir + serverPass));
+					String password =
+							generateStrongPasswordHash(new String(console.readPassword("Please enter a password: ")));
+					if(Arrays.equals(fileBytes, password.getBytes())){
+						serverAuthenticated = true;
+					}
+				}catch(Exception e){
+					e.printStackTrace();
+				}
+			}
+		}
+
+	}
+
+	private static String generateStrongPasswordHash(String password) throws NoSuchAlgorithmException, InvalidKeySpecException
+	{
+		int iterations = 1000;
+		char[] chars = password.toCharArray();
+		byte[] salt = getSalt();
+		PBEKeySpec spec = new PBEKeySpec(chars, salt, iterations, 64 * 8);
+		SecretKeyFactory skf = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1");
+		byte[] hash = skf.generateSecret(spec).getEncoded();
+		return iterations + ":" + toHex(salt) + ":" + toHex(hash);
+	}
+
+	private static byte[] getSalt() throws NoSuchAlgorithmException //creates a salt
+	{
+		byte[] salt = new byte[16];
+		File f = new File(passwordDir + saltFileName);
+		if((f.exists() && !f.isDirectory())){
+			try {
+				salt = Files.readAllBytes(Paths.get(passwordDir + saltFileName));
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+			return salt;
+
+		}else{//generate new salt and save
+			SecureRandom sr = SecureRandom.getInstance("SHA1PRNG");
+			sr.nextBytes(salt);
+			try{
+				FileOutputStream fos = new FileOutputStream(passwordDir + saltFileName);
+				fos.write(salt);
+				fos.close();
+			}catch(Exception e){
+				e.printStackTrace();
+			}
+			return salt;
+		}
+	}
+
+	private static String toHex(byte[] array) throws NoSuchAlgorithmException
+	{
+		BigInteger bi = new BigInteger(1, array);
+		String hex = bi.toString(16);
+		int paddingLength = (array.length * 2) - hex.length();
+		if(paddingLength > 0)
+		{
+			return String.format("%0"  +paddingLength + "d", 0) + hex;
+		}else{
+			return hex;
+		}
 	}
 
 	private static void authenticateClientMessage(String messageFilePath, File f) {
@@ -143,11 +253,40 @@ public class SecureChat2 {
 			//if client sent a password
 
 			//compare to pw table
-			if(m.getContents().equals("clientpw")) {
-				System.out.println("correct password.");
-				messageAuthenticated = true;
-				passwordNeeded = false;
-			}
+				f = new File(passwordDir + clientPass);
+				if(!(f.exists() && !f.isDirectory())) {//if no client password file exists, create one 
+					// create password
+					try {
+						Files.write(Paths.get(passwordDir + clientPass), generateStrongPasswordHash(new String(m.getContents())).getBytes());
+						messageAuthenticated = true;
+
+						clientPasswordNeeded = false;
+
+					} catch (Exception e) {
+						e.printStackTrace();
+					}
+
+				}else{
+
+					try{
+						byte[] fileBytes = Files.readAllBytes(Paths.get(passwordDir + clientPass));
+					if(Arrays.equals(fileBytes, generateStrongPasswordHash(new String(m.getContents())).getBytes())){
+							messageAuthenticated = true;
+
+							clientPasswordNeeded = false;
+							
+						}
+					}catch(Exception e){
+						e.printStackTrace();
+					}
+				}
+			
+			
+//			if(m.getContents().equals("clientpw")) {
+//				System.out.println("correct password.");
+//				messageAuthenticated = true;
+//				clientPasswordNeeded = false;
+//			}
 
 		}
 		else {
@@ -201,13 +340,12 @@ public class SecureChat2 {
 
 		// if authentication is used check password
 		if(options[2]) {
-			passwordNeeded = true;
+			clientPasswordNeeded = true;
 			boolean success = false;
 
 			while(!success) {
-				System.out.println("Enter password:");
-				String password = scanner.nextLine();
-	
+				String password = new String(console.readPassword("Please enter a password: "));
+
 				//send password message
 				Message m = new Message(Message.MESSAGE_TYPE_PASSWORD, password);
 				m.writeMessageFile(messageSendFilePath, options, false);
@@ -225,7 +363,7 @@ public class SecureChat2 {
 					if(m.getType() == Message.MESSAGE_TYPE_CONFIRM) {
 						System.out.println("Password correct.");
 						success = true;
-						passwordNeeded = false;
+						clientPasswordNeeded = false;
 						start = true;
 					}
 					else {
@@ -256,7 +394,7 @@ public class SecureChat2 {
 		}
 		if(input.contains("a")) {
 			options[2] = true;
-			passwordNeeded = true;
+			clientPasswordNeeded = true;
 		}
 	}
 
