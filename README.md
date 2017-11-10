@@ -1,4 +1,9 @@
 # securedchat
+
+Created by, V00807046 - Andrei Taylor, V00849182 - Duc Nguyen, V00809321 - Justyn Houle, 
+Sam Taylor 
+
+
 Toy project to do do secure local messaging.
 
 The server and client run in different processes. They need to be run in different
@@ -107,3 +112,72 @@ On failure of reading the message a error is displayed.
 - the program is tested to currently allow one of either the client or server to send a message at a time
 - manual setup of the folder permissions must be set up on each machine that this program is run on
 - we are currently only supporting Ubuntu 17.10.
+
+
+## Technical Details
+
+### SecureChat Class
+
+The main class of the application that performs all client and server initialization tasks and then starts the MessageRead and MessageWrite threads.
+
+#### Methods
+
+- ```void initServer()``` Performs all server initialization steps including comparing selected security options to client security options and password authentication.
+
+- ```void authorizeServerPassword()``` Compare user input to pbkdf2 hashed password.
+
+
+- ```String generateStrongPasswordHash(String password)```:
+
+- ```byte[] getSalt()```
+
+- ```void authenticateClientMessage(String messageFilePath, File f)``` Authenticates client options and passwords messages. Sends the corresponding confirmation or error message response.
+
+- ```void initClient()``` Performs all client initialization steps including sending selected options to server and password authentication.
+
+- ```void getSecurityOptions()``` Sets options array values from stdin input txt.
+
+- ```void setOptions(String optionsString, boolean[] optionsArr)``` Sets optionsArr from a string of options in optionsString.
+
+- ```void sendOptionsMessage(String messageFilePath)``` Sends a message with selected options to messageFilePath.
+
+- ```void waitForMessage(String inboxDir)``` Wait for a message to be received in inboxDir. Waits for a short ammount of time to allow file to be successfully written before it is read.
+
+- ```byte[] getHash(String message)``` Hash string message using SHA-1
+
+- ```void printUsage()``` Prints a help message for how to run the program
+
+
+###Message Class
+
+Class used for handling messages. Stores message type and contents. Provides functions for reading and writing messages
+
+####Methods
+
+- ```void writePlainTextMessageFile(String messageFilePath)``` Write a plain text message to a file. No encryption done here.
+
+- ```void writeMessageFile(String messageFilePath, boolean[] options, boolean forceEncrypt)``` Write a message to a file with encryption if it is specified in options. Encryption can be forced with the forceEncrypt parameter (used for checksum files).
+
+- ```void readPlainTextMessageFile(String messageFilePath)``` Read a plain text message to a file. No encryption done here.
+
+- ```void readMessageFile(String messageFilePath, boolean[] options, boolean forceDecrypt)``` Write a message to a file with encryption if it is specified in options.Encryption can be forced with the forceEncrypt parameter (used for checksum files and initialization messages).
+
+- ```static SecretKey generateOrGetSecretKey()``` Gets a secret key stored in a file or generates a new secret key if the file does not exist.
+
+
+
+###MessageWriter Class
+Thread class to get input from std in and store it in a message file (sending it to the server)
+
+####Methods
+- ```void run()``` Runs an infinite loop that checks for text input then writes messages to a file
+
+
+###MessageReader Class
+
+Class to reads messages from message files and writes contents to std out
+
+
+####Methods
+
+- ```void run()``` Runs an inifinite loop that checks for new messages and processes them on arrival. Performs checksum authentication.

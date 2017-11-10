@@ -10,7 +10,8 @@ import javax.crypto.spec.SecretKeySpec;
 
 
 /*
- *  Class used for handling messages, storing message type and contents
+ *  Class used for handling messages. Stores message type and contents.
+ *  Provides functions for reading and writing messages
  */
 public class Message {
 
@@ -118,7 +119,7 @@ public class Message {
 			byte[] fileBytes = Files.readAllBytes(Paths.get(messageFilePath));
 
 			String messageContent = new String(fileBytes, "UTF-8");
-			
+
 			String t = messageContent.substring(0, 1);
 			type = Integer.parseInt(t);
 

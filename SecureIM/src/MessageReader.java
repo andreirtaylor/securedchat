@@ -19,13 +19,13 @@ public class MessageReader extends Thread {
 	}
 	
 	public void run() {
-		String messageFilePath = inboxDir + SecureChat2.messageName;
-		String checksumMessageFilePath = messageFilePath + SecureChat2.checksumExtension;
+		String messageFilePath = inboxDir + SecureChat.messageName;
+		String checksumMessageFilePath = messageFilePath + SecureChat.checksumExtension;
 
 		try {
 			while(true) {
 
-				SecureChat2.waitForMessage(inboxDir);
+				SecureChat.waitForMessage(inboxDir);
 				
 				File f = new File(messageFilePath);
 
@@ -40,7 +40,7 @@ public class MessageReader extends Thread {
 					// integrity security option
 					if(options[1]) {
 						// wait for checksum file to arrive
-						SecureChat2.waitForMessage(inboxDir);
+						SecureChat.waitForMessage(inboxDir);
 						
 						f = new File(checksumMessageFilePath);
 
@@ -50,7 +50,7 @@ public class MessageReader extends Thread {
 							checksumMessage.readMessageFile(checksumMessageFilePath, options, true);
 							f.delete();
 
-							String newMessageHash = new String(SecureChat2.getHash(m.getContents()), "UTF-8");
+							String newMessageHash = new String(SecureChat.getHash(m.getContents()), "UTF-8");
 
 							if(checksumMessage.getContents().equals(newMessageHash)) {
 								println("Checksum successful");

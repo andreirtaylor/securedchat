@@ -1,356 +1,499 @@
-import java.io.BufferedInputStream;
-import java.io.BufferedReader;
-import java.io.ByteArrayInputStream;
-import java.io.DataOutputStream;
+import java.util.Arrays;
+import java.util.Scanner;
+import java.io.Console;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
+import java.io.FileFilter;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.io.PrintWriter;
-import java.nio.charset.StandardCharsets;
+import java.math.BigInteger;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.security.InvalidKeyException;
-import java.security.KeyPair;
-import java.security.KeyPairGenerator;
-import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
-import java.security.PrivateKey;
-import java.security.PublicKey;
-import java.security.SecureRandom;
-import java.security.Signature;
-import java.security.SignatureException;
-import java.util.Scanner;
-import javax.xml.bind.DatatypeConverter;
-import javax.crypto.Cipher;
-import javax.crypto.KeyGenerator;
-import javax.crypto.SecretKey;
-import javax.crypto.spec.SecretKeySpec;
-import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.JTextField;
 import java.security.MessageDigest;
-import java.util.concurrent.TimeUnit;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
+import java.security.spec.InvalidKeySpecException;
+
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.PBEKeySpec;
 
 
-
+/*
+ *  Main class for starting SecureChat application
+ * 
+ *  Can be started with --server or --client command line option to run
+ *  the server or the client
+ *  
+ *  Includes client and server initialization methods and starts the
+ *  MessageReader and MessageWriter Threads
+ *
+ */
 public class SecureChat {
 
-  private static void printUsage(){
-    System.out.println("Please use command line arguments to specify if this is a client or a server");
-    System.out.println("run     java Client --server   to create a server");
-    System.out.println("run     java Client --client   to create a client");
-  }
+	static Console console = System.console();
 
-  private static KeyPair pair;
-  private static PrivateKey priv;
+	private static final String serverInboxDir = "serverInbox/";
+	private static final String clientInboxDir = "clientInbox/";
+	private static final String passwordDir = "passwords/";
+	private static final String serverPass = "serverpw";
+	private static final String clientPass = "clientpw";
+	protected static final String messageName = "message";
+	protected static final String saltFileName = "salt";
+	protected static final String checksumExtension = ".checksum";
 
-  public static PublicKey pub;
+	private static Scanner scanner;
+	private static boolean start = false;
+	private static boolean clientPasswordNeeded = false;
+	private static boolean serverAuthenticated = false;
+	private static boolean[] options = new boolean[3];
 
-  // incomming and outgoing folders
-  public static String serverIncomming = "serverIncomming/";
-  public static String serverOutgoing = "serverOutgoing/";
+	public static FileFilter hiddenFileFilter = new FileFilter() {
+		public boolean accept(File file) {
+			if(file.isHidden()) {
+				return false;
+			}
+			return true;
+		}
+	};
 
+	public static void main(String[] args) {
 
-  // where to save files
-  public static String encFileName = "encMessage";
-  public static String checkSumFile = "checkSumFile";
-  public static String optionsFile = "optionsFile";
+		String messagePrompt = "Enter message: ";
+		String inputBuffer = "";
+		String readInboxDir = "";
+		String writeInboxDir = "";
 
-  public static void main(String[] args) throws Exception {
-    if(args.length != 1){
-      printUsage();
-      return;
-    }
+		scanner = new Scanner(System.in);
 
-    Scanner sc = new Scanner(System.in);
-    if(args[0].equals("--server")){
-      System.out.println("Starting server");
+		// create client and server inboxes
+		File inbox = new File(serverInboxDir);
+		if(!inbox.exists()) {
+			inbox.mkdir();
+		}
+		inbox = new File(clientInboxDir);
+		if(!inbox.exists()) {
+			inbox.mkdir();
+		}
 
-      while(true){
-        doServer(sc);
-      }
-    } else if (args[0].equals("--client")){
-      System.out.println("Starting client");
+		if(args.length != 1){
+			printUsage();
+			return;
+		}
 
-      while(true){
-        boolean[] options = getSecurityOptions(sc);
-        String plaintextMessage = getUserMessage(sc);
-        establishSecureConnection();
+		if(args[0].equals("--server")) {
+			System.out.println("Starting server.");
+			readInboxDir = serverInboxDir;
+			writeInboxDir = clientInboxDir;
+			start = true;
+			initServer();
+		}
 
-        String securedMessage = prepareMessage(plaintextMessage, options, sc);
-        //System.out.println(securedMessage);
-      }
-    } else {
-      printUsage();
-    }
+		else if(args[0].equals("--client")) {
+			System.out.println("Starting client.");
+			readInboxDir = clientInboxDir;
+			writeInboxDir = serverInboxDir;
+			start = true;
+			initClient();
+		}
 
-  }
+		if(start) {
+			MessageReader reader = new MessageReader(messagePrompt, inputBuffer, readInboxDir, options);
+			reader.setName("reader");
+			reader.start();
 
-  // 0 -> Confidentiality
-  // 1 -> integrity
-  // 2 -> authentication
-  private static boolean[] getMessageOptions(){
-      boolean[] ret = null;
-      try{
-        String optionsfn = serverIncomming + optionsFile;
-        //server side code
-        byte[] cipherText = Files.readAllBytes(Paths.get(optionsfn ));
-        Cipher AesCipher = Cipher.getInstance("AES");
-        AesCipher.init(Cipher.DECRYPT_MODE, generateOrGetSecretKey());
+			MessageWriter writer = new MessageWriter(messagePrompt, inputBuffer, writeInboxDir, options);
+			writer.setName("writer");
+			writer.start();
+		}
 
-        byte[] bytePlainText = AesCipher.doFinal(cipherText);
-        System.out.println("Options sent");
-        String s = new String(bytePlainText, "UTF-8");
-        ret = new boolean[s.length()];
-        for(int i = 0; i < s.length(); ++i){
-          ret[i] = s.charAt(i) == '1' ? true : false;
-        }
-        if(!ret[0] && !ret[1] && !ret[2]) System.out.print("None");
-        if(ret[0]) System.out.print("Confidentiality ");
-        if(ret[1]) System.out.print("Integrity ");
-        if(ret[2]) System.out.print("Authentication ");
-        System.out.println();
+	}
 
-        File f = new File(optionsfn);
-        f.delete();
-      } catch (Exception e){
-        e.printStackTrace();
-      }
-      return ret;
-  }
+	/*
+	 *  Performs all server initialization steps including comparing selected
+	 *	security options to client security options and password authentication
+	 */
+	private static void initServer() {
+		// set CIA options
+		getSecurityOptions();
 
-  private static void doServer(Scanner sc) throws InterruptedException {
-    int len = new File(serverIncomming).listFiles().length;
-    if(len >= 2){
-      //TimeUnit.MILLISECONDS.sleep(5000);
-      TimeUnit.MILLISECONDS.sleep(800);
+		System.out.println("Waiting for client.");
 
-      String encryptedMessage = serverIncomming + encFileName;
-      String encryptedCheckSum = serverIncomming + checkSumFile;
+		// wait for client initialize
+		waitForMessage(serverInboxDir);
 
-      try{
-        //server side code
-        boolean[] options = getMessageOptions();
+		// read CIA options in message
+		String messageFilePath = serverInboxDir + messageName;
+		File f = new File(messageFilePath);
 
-        byte[] b = Files.readAllBytes(Paths.get(encryptedMessage));
-        String text = new String(b, "UTF-8");
+		if(f.exists()) {
+			authenticateClientMessage(messageFilePath, f);
+		}
 
-        // if confidentiality
-        if(options[0]){
-          byte[] buf = Files.readAllBytes(Paths.get(encryptedMessage));
-          Cipher AesCipher = Cipher.getInstance("AES");
-          AesCipher.init(Cipher.DECRYPT_MODE, generateOrGetSecretKey());
+		// if authentication is used check password
+		while(clientPasswordNeeded) {
+			authorizeServerPassword();
+			waitForMessage(serverInboxDir);
+			f = new File(messageFilePath);
+			if(f.exists()) {
+				authenticateClientMessage(messageFilePath, f);
+			}
+		}
 
-          byte[] bytePlainText = AesCipher.doFinal(buf);
-          text = new String(bytePlainText, "UTF-8");
-        }
-        System.out.println(text);
+	}
 
-        if(options[1]){
-          byte[] cs = Files.readAllBytes(Paths.get(encryptedCheckSum));
-          Cipher AesCipher = Cipher.getInstance("AES");
-          AesCipher.init(Cipher.DECRYPT_MODE, generateOrGetSecretKey());
+	/*
+	 *  Compare user input to pbkdf2 hashed password
+	 */
+	private static void authorizeServerPassword() {
 
-          byte[] bytePlainText = AesCipher.doFinal(cs);
-          String sentCS = new String(bytePlainText, "UTF-8");
-          String generatedCS = new String(getMD5(text), "UTF-8");
+		while(!serverAuthenticated) {
+			File f = new File(passwordDir + serverPass);
+			if(!(f.exists() && !f.isDirectory())) {
+				//if no server password file exists, create one 
+				
+				// create password
+				String newPassword;
+				try {
+					newPassword = generateStrongPasswordHash(new String(console.readPassword("Please enter a password: ")));
 
-          if(! sentCS.equals(generatedCS)){
-            System.out.println("The checksum does not match, invalid message");
-            throw new Exception("BOOOOO");
-          }
-        }
-
-        if(options[2]){
-          String[] msg_pwd = text.split("\n");
-          text = msg_pwd[0];
-          String pwd = msg_pwd[1];
-          System.out.println("Password from client");
-          System.out.println(pwd);
-          // TODO setup the password testing
-        }
-
-        System.out.println("Message from client");
-        System.out.println(text);
+					Files.write(Paths.get(passwordDir + serverPass), newPassword.getBytes());
+					serverAuthenticated = true;
 
 
-      } catch (Exception e){
-        //e.printStackTrace();
-      }
+				}
+				catch (Exception e) {
+					e.printStackTrace();
+				}
 
-      // remove all files
-      File dir = new File(serverIncomming);
-      for (File file: dir.listFiles()) {
-        file.delete();
-      }
-    }
-    TimeUnit.SECONDS.sleep(1);
-  }
+			}
+			else {
 
-  // Pass in a String message and return a MD5 checksum
-  private static byte[] getMD5(String message){
-    byte[] hash = null;
-    try{
-      MessageDigest digest = MessageDigest.getInstance("MD5");
-      hash = digest.digest(message.getBytes("UTF-8"));
-    } catch (Exception e){
-      e.printStackTrace();
-    }
-    return hash;
-  }
+				try {
+					byte[] fileBytes = Files.readAllBytes(Paths.get(passwordDir + serverPass));
+					String password = generateStrongPasswordHash(new String(console.readPassword("Please enter a password: ")));
 
+					if(Arrays.equals(fileBytes, password.getBytes())) {
+						serverAuthenticated = true;
+					}
+				}
+				catch(Exception e) {
+					e.printStackTrace();
+				}
+			}
+		}
 
-  private static String getUserMessage(Scanner sc) {
-    System.out.println("Enter a message");
-    String message = sc.nextLine();
-    return message;
-  }
+	}
 
+	private static String generateStrongPasswordHash(String password) throws NoSuchAlgorithmException, InvalidKeySpecException
+	{
+		int iterations = 1000;
+		char[] chars = password.toCharArray();
+		byte[] salt = getSalt();
+		PBEKeySpec spec = new PBEKeySpec(chars, salt, iterations, 64 * 8);
+		SecretKeyFactory skf = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1");
+		byte[] hash = skf.generateSecret(spec).getEncoded();
+		return iterations + ":" + toHex(salt) + ":" + toHex(hash);
+	}
 
-  private static void establishSecureConnection() {
-    // TODO esablish secure connection
+	private static byte[] getSalt() throws NoSuchAlgorithmException {
+		byte[] salt = new byte[16];
+		File f = new File(passwordDir + saltFileName);
+		if((f.exists() && !f.isDirectory())) {
+			try {
+				salt = Files.readAllBytes(Paths.get(passwordDir + saltFileName));
+			}
+			catch (IOException e) {
+				e.printStackTrace();
+			}
+			return salt;
 
-  }
+		}
+		else {//generate new salt and save
+			SecureRandom sr = SecureRandom.getInstance("SHA1PRNG");
+			sr.nextBytes(salt);
+			try {
+				FileOutputStream fos = new FileOutputStream(passwordDir + saltFileName);
+				fos.write(salt);
+				fos.close();
+			}
+			catch(Exception e){
+				e.printStackTrace();
+			}
+			return salt;
+		}
+	}
 
+	private static String toHex(byte[] array) throws NoSuchAlgorithmException {
+		BigInteger bi = new BigInteger(1, array);
+		String hex = bi.toString(16);
+		int paddingLength = (array.length * 2) - hex.length();
 
-  private static String prepareMessage(String message,boolean[] options, Scanner sc) {
+		if(paddingLength > 0) {
+			return String.format("%0"  +paddingLength + "d", 0) + hex;
+		}
+		else{
+			return hex;
+		}
+	}
 
-    if(options[2]){
-      //apply authentication
-      System.out.println("Exter your password for authentication");
-      String password = sc.nextLine();
-      message += "\n" + password;
-    }
+	/*
+	 * Authenticates client options and passwords messages
+	 * Sends the corresponding confirmation or error message response
+	 */
+	private static void authenticateClientMessage(String messageFilePath, File f) {
+		boolean messageAuthenticated = false;
 
-    byte[] BytesToWrite = message.getBytes();
+		// force encryption on initialization methods
+		Message m = new Message();
+		m.readMessageFile(messageFilePath, options, true);
 
-    if(options[0]){
-      //apply confidentiality
-      try{
-        Cipher AesCipher = Cipher.getInstance("AES");
-        AesCipher.init(Cipher.ENCRYPT_MODE, generateOrGetSecretKey());
+		f.delete();
 
-        BytesToWrite = AesCipher.doFinal(message.getBytes());
-      }catch(Exception e){
+		if(m.getType() == Message.MESSAGE_TYPE_OPTIONS) {
+			//if the client sent a request (not an IM message)
 
-      }
+			boolean[] clientOptions = new boolean[3];
+			setOptions(m.getContents(), clientOptions);
 
-    }
+			boolean match = true;
 
-    // write the options file
-    try{
-      String s = "";
-      for(int i = 0; i < options.length ;  ++i){
-        if(options[i]){
-          s += "1";
-        } else {
-          s += "0";
-        }
-      }
+			// check if CIA options match
+			for(int i = 0; i < options.length; i++) {
+				if(options[i] != clientOptions[i]) {
+					match = false;
+					break;
+				}
+			}
 
-      // always encrypt the options file
-      Cipher AesCipher = Cipher.getInstance("AES");
-      AesCipher.init(Cipher.ENCRYPT_MODE, generateOrGetSecretKey());
+			// if options match, send a confirmation message back
+			if(match) {
+				messageAuthenticated = true;
+			}
+			else {
+				System.out.println("Security options don't match. Cannot create connection.");
+				start = false;	
+			}
 
-      Files.write(Paths.get(serverIncomming + optionsFile)
-                  , AesCipher.doFinal(s.getBytes()));
+		}
+		else if(m.getType() == Message.MESSAGE_TYPE_PASSWORD) {
+			//if client sent a password
 
-    } catch (Exception e) {
-      // TODO Auto-generated catch block
-      e.printStackTrace();
-    }
+			//compare to pw table
+				f = new File(passwordDir + clientPass);
+				if(!(f.exists() && !f.isDirectory())) {//if no client password file exists, create one 
+					// create password
+					try {
+						Files.write(Paths.get(passwordDir + clientPass), generateStrongPasswordHash(new String(m.getContents())).getBytes());
+						messageAuthenticated = true;
 
+						clientPasswordNeeded = false;
 
-    if(options[1]){
-      try{
-        //apply integrity
-        byte[] hashMessage = getMD5(message);
-        System.out.println(message);
+					} catch (Exception e) {
+						e.printStackTrace();
+					}
 
-        // if you are using confidentiality
-        Cipher AesCipher = Cipher.getInstance("AES");
-        AesCipher.init(Cipher.ENCRYPT_MODE, generateOrGetSecretKey());
+				}else{
 
-        hashMessage = AesCipher.doFinal(hashMessage);
+					try{
+						byte[] fileBytes = Files.readAllBytes(Paths.get(passwordDir + clientPass));
+					if(Arrays.equals(fileBytes, generateStrongPasswordHash(new String(m.getContents())).getBytes())){
+							messageAuthenticated = true;
 
-        Files.write(Paths.get(serverIncomming + checkSumFile), hashMessage);
-      } catch (Exception e) {
-        // TODO Auto-generated catch block
-        e.printStackTrace();
-      }
-    }
+							clientPasswordNeeded = false;
+							
+						}
+					}catch(Exception e){
+						e.printStackTrace();
+					}
+				}
 
-    // always wrtite the file
-    try{
-      Files.write(Paths.get(serverIncomming + encFileName), BytesToWrite);
-    } catch (Exception e) {
-      // TODO Auto-generated catch block
-      e.printStackTrace();
-    }
-    return message;
-  }
+		}
+		else {
+			start = false;
+		}
 
-  private static SecretKey generateOrGetSecretKey(){
-    try{
-      SecretKey secKey;
-      Path path = Paths.get("symKey");
-      File f = new File("symKey");
+		int messageType;
 
+		if(messageAuthenticated) {
+			messageType = Message.MESSAGE_TYPE_CONFIRM;
+		}
+		else {
+			messageType = Message.MESSAGE_TYPE_WRONG_PASSWORD;
+		}
 
-      if(f.exists() && !f.isDirectory()) {
-        //System.out.println("AES key exists, using previous key");
-        byte[] key = Files.readAllBytes(path);
-        secKey = new SecretKeySpec(key, "AES");
-      }else{//if key not found, create key
-        System.out.println("Generating new AES Key");
-        KeyGenerator KeyGen = KeyGenerator.getInstance("AES");
+		// send the message
+		messageFilePath = clientInboxDir + messageName;
+		Message confirmMessage = new Message(messageType, "This is a confirmation message");
+		confirmMessage.writePlainTextMessageFile(messageFilePath);
+	}
 
-        KeyGen.init(128);
+	/*
+	 *  Performs all client initialization steps including sending selected
+	 *	options to server and password authentication
+	 */
+	private static void initClient() {
+		String messageSendFilePath = serverInboxDir + messageName;
+		String messageReceiveFilePath = clientInboxDir + messageName;
 
-        secKey = KeyGen.generateKey();
+		// select CIA options
+		getSecurityOptions();
 
-        byte[] key = secKey.getEncoded();
-        FileOutputStream keyfos = new FileOutputStream("symKey");
-        keyfos.write(key);
-        keyfos.close();
-      }
-      return secKey;
-    } catch (Exception e) {
-      e.printStackTrace();
-    }
+		// attempt to create establish connection (send CIA options)
+		sendOptionsMessage(messageSendFilePath);
 
-    // should never get here
-    return null;
-  }
+		System.out.println("Waiting for confirmation from server.");
 
-  // 0 -> Confidentiality
-  // 1 -> integrity
-  // 2 -> authentication
-  private static boolean[] getSecurityOptions(Scanner sc) {
-    boolean options[] = new boolean[3];
-    System.out.println("Enter what security Properties (For confidentiality and integrity, input 'ci'. For confidentiality integrity, and authentication, type 'cia')");
-    String input = sc.nextLine();
+		waitForMessage(clientInboxDir);
 
-    if(input.contains("c")){
-      options[0] = true;
-      System.out.println("Confidentiality");
-    }
-    if(input.contains("i")){
-      options[1] = true;
-      System.out.println("integrity");
-    }
-    if(input.contains("a")){
-      options[2] = true;
-      System.out.println("authentication");
-    }
+		// check file exists and that it is the correct message type
+		File f = new File(messageReceiveFilePath);
 
-    return options;
-  }
+		if(f.exists()) {
+			Message m = new Message();
+			m.readPlainTextMessageFile(messageReceiveFilePath);
+			f.delete();
+
+			if(m.getType() == Message.MESSAGE_TYPE_CONFIRM) {
+				System.out.println("Connection established successfully.");
+			}
+			else {
+				start = false;
+			}
+		}
+
+		// if authentication is used check password
+		if(options[2]) {
+			clientPasswordNeeded = true;
+			boolean success = false;
+
+			while(!success) {
+				String password = new String(console.readPassword("Please enter a password: "));
+
+				//send password message
+				Message m = new Message(Message.MESSAGE_TYPE_PASSWORD, password);
+				m.writeMessageFile(messageSendFilePath, options, false);
+
+				//wait for server to respond
+				waitForMessage(clientInboxDir);
+
+				// check file exists and that it is the correct message type
+				f = new File(messageReceiveFilePath);
+
+				if(f.exists()) {
+					m = new Message();
+					m.readPlainTextMessageFile(messageReceiveFilePath);
+					f.delete();
+					if(m.getType() == Message.MESSAGE_TYPE_CONFIRM) {
+						System.out.println("Password correct.");
+						success = true;
+						clientPasswordNeeded = false;
+						start = true;
+					}
+					else {
+						System.out.println("Password incorrect.");
+						success = false;
+						start = false;
+					}
+				}
+			}
+
+		}
+		else {
+			//if no password needed, start IM functionality
+			start = true;
+		}
+	}
+
+	/*
+	 * Sets options array values from stdin input txt
+	 */
+	private static void getSecurityOptions() {
+		System.out.println("Enter desired security options (CIA):");
+		String input = scanner.nextLine();
+		input = input.toLowerCase();
+
+		if(input.contains("c")) {
+			options[0] = true;
+		}
+		if(input.contains("i")) {
+			options[1] = true;
+		}
+		if(input.contains("a")) {
+			options[2] = true;
+			clientPasswordNeeded = true;
+		}
+	}
+
+	/*
+	 *  Sets optionsArr from a string of options in optionsString
+	 */
+	private static void setOptions(String optionsString, boolean[] optionsArr) {
+		for(int i = 0; i < optionsArr.length; i++) {
+			if(optionsString.charAt(i) == '1') {
+				optionsArr[i] = true;
+			}
+		}
+	}
+
+	/*
+	 * Sends a message with selected options to messageFilePath
+	 */
+	private static void sendOptionsMessage(String messageFilePath) {
+		String optionsString = "";
+		for(int i = 0; i < options.length; i++){
+			if(options[i]){
+				optionsString += "1";
+			}
+			else {
+				optionsString += "0";
+			}
+		}
+
+		Message m = new Message(Message.MESSAGE_TYPE_OPTIONS, optionsString);
+		m.writeMessageFile(messageFilePath, options, true);
+	}
+
+	/*
+	 * Wait for a message to be received in inboxDir
+	 * Waits for a short ammount of time to allow file to be successfully 
+	 *	written before it is read
+	 */
+	protected static void waitForMessage(String inboxDir) {
+		int numFiles = 0;
+		while(numFiles == 0) {
+			numFiles = new File(inboxDir).listFiles(hiddenFileFilter).length;
+		}
+
+		try {
+			// wait to ensure file is completely written
+			MessageWriter.sleep(500);
+		}
+		catch(Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+	/*
+	 *  Hash message using SHA-1
+	 */
+	protected static byte[] getHash(String message){
+		byte[] hash = null;
+		try {
+			MessageDigest digest = MessageDigest.getInstance("SHA-1");
+			hash = digest.digest(message.getBytes("UTF-8"));
+		}
+		catch (Exception e){
+			e.printStackTrace();
+		}
+
+		return hash;
+	}
+
+	/*
+	 * Prints a help message for how to run the program
+	 */
+	private static void printUsage(){
+		System.out.println("Please use command line arguments to specify if this is a client or a server");
+		System.out.println("run     java SecureChat --server   to create a server");
+		System.out.println("run     java SecureChat --client   to create a client");
+	}
 }
-
